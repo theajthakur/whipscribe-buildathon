@@ -1,6 +1,6 @@
 # Vijay Singh (theajthakur)
 
-Full Stack Web Developer & AI Automation Engineer — 3rd-year B.Tech Computer Science, Greater Noida.
+Full-Stack Developer & AI Engineer — 3rd-year B.Tech CSE, Greater Noida.
 
 - **GitHub:** https://github.com/theajthakur
 - **LinkedIn:** https://linkedin.com/in/theajthakur
@@ -21,29 +21,29 @@ Full Stack Web Developer & AI Automation Engineer — 3rd-year B.Tech Computer S
 | SnakeLadder | Next.js · TypeScript · Tailwind CSS · FastAPI · WebSockets | https://snakeladder.me/ |
 | Oppskills | Next.js · NestJS · Prisma · PostgreSQL | https://oppskills.com/ |
 
-Both are live and accessible. I own the full stack on each — frontend, backend, infra, deployment.
+Both are live and production-deployed. I own the full stack across both — frontend, backend, infra, and deployment.
 
-### Hackathon
+### Hackathon Project
 
-**Razorpay Buildathon** — built **ShopAgent**, an agentic commerce platform:
-- AI agent drives product discovery, cart management, order creation and payment in a single conversation
-- Integrates Razorpay payment workflows, webhooks and merchant onboarding
-- Built solo, end to end
+**Razorpay Buildathon** — developed **ShopAgent**, an agentic commerce platform:
+- AI agent drives product discovery, cart management, order creation, and payment in a single conversation
+- Integrates Razorpay payment workflows, webhooks, and merchant onboarding
+- Built solo, end-to-end
 
 Repo: https://github.com/theajthakur/shopagent_ai
 
-### Team & leadership
+### Team & Leadership
 
-**Technical Coordinator — Rotaract Galgotias:** planned and executed technical work for college events; coordinated volunteers, delegated tasks, handled on-the-day execution.
+**Technical Coordinator — Rotaract Galgotias:** Planned and executed technical operations for college events; coordinated volunteers, delegated tasks, and managed on-ground execution.
 
-**Oppskills collaboration:** worked with a design partner; I owned all backend architecture decisions (NestJS service structure, Prisma schema, PostgreSQL, Redis, Docker, CI/CD), infra and deployments. My collaborator handled UI design direction.
+**Oppskills Collaboration:** Worked alongside a UI/UX design partner. I owned all backend architecture (NestJS service structure, Prisma schema, PostgreSQL, Redis, Docker, CI/CD), infrastructure, and deployments.
 
-### What I can do
+### Technical Stack
 
-- Full-stack: Next.js / React / TypeScript, Node.js / NestJS / Express, FastAPI
-- AI/LLM: LangChain, RAG, vector databases, agentic pipelines, n8n workflows
-- Infra: PostgreSQL, MongoDB, Redis, Prisma, Docker, GCP, VPS, CI/CD
+- **Full-Stack:** Next.js / React / TypeScript, Node.js / NestJS / Express, FastAPI
+- **AI / LLM:** LangChain, RAG, vector databases, agentic pipelines, n8n workflows
+- **Infrastructure:** PostgreSQL, MongoDB, Redis, Prisma, Docker, GCP, VPS, CI/CD
 
-### Self-drive
+### Self-Drive
 
-I found this buildathon, read the brief, opened this PR without being asked. The leaderboard and the work described are exactly what I am looking for. I will keep moving.
+I discovered this buildathon, reviewed the brief, and initiated this PR proactively. The challenge and problem space align precisely with what I am looking for. I will keep moving.
