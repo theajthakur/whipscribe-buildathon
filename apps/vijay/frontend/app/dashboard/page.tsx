@@ -104,22 +104,22 @@ export default function DashboardPage() {
 
   const itemsToDisplay = activeCallData?.proposal
     ? [
-        ...activeCallData.proposal.requirements.map((r: any) => ({
-          id: r.id,
+        ...(activeCallData.proposal.requirements || []).map((r: any) => ({
+          id: r.id || Math.random().toString(),
           type: "requirement" as const,
           text: r.text,
           time: r.time,
           transcriptRef: "t1",
         })),
-        ...activeCallData.proposal.tasks.map((t: any) => ({
-          id: t.id,
+        ...(activeCallData.proposal.tasks || []).map((t: any) => ({
+          id: t.id || Math.random().toString(),
           type: "task" as const,
-          text: `${t.title} [Effort: ${t.effort}]`,
+          text: `${t.title} [Effort: ${t.effort || "M"}]`,
           time: t.time,
           transcriptRef: "t2",
         })),
       ]
-    : mockBriefItems
+    : []
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
@@ -265,47 +265,64 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* Right Column: Active Brief View */}
+            {/* Right Column: Active Brief View or Empty State */}
             <div className="lg:col-span-7 space-y-6">
-              <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
-                <div className="flex items-center justify-between mb-4 pb-3 border-b border-border">
-                  <div className="flex items-center gap-2">
-                    <FileText className="w-4 h-4 text-primary" />
-                    <h2 className="font-display font-semibold text-base text-foreground">
-                      {activeCallData ? "Processed Call Proposal" : "Acme E-commerce Redesign Call"}
-                    </h2>
+              {activeCallData ? (
+                <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
+                  <div className="flex items-center justify-between mb-4 pb-3 border-b border-border">
+                    <div className="flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-primary" />
+                      <h2 className="font-display font-semibold text-base text-foreground">
+                        Processed Call Proposal
+                      </h2>
+                    </div>
+                    <Badge variant="success" className="text-xs">
+                      <Clock className="w-3 h-3 mr-1" /> Active
+                    </Badge>
                   </div>
-                  <Badge variant="success" className="text-xs">
-                    <Clock className="w-3 h-3 mr-1" /> Today
-                  </Badge>
+
+                  {activeCallData?.router_result && (
+                    <div className="mb-4 p-3 rounded-lg bg-primary/10 border border-primary/20 text-xs flex items-center justify-between">
+                      <div>
+                        <span className="font-bold text-foreground">Detected Intent: </span>
+                        <span className="font-mono text-primary font-semibold uppercase">
+                          {activeCallData.router_result.intent}
+                        </span>
+                      </div>
+                      <span className="text-muted-foreground">
+                        Confidence: {(activeCallData.router_result.confidence * 100).toFixed(0)}%
+                      </span>
+                    </div>
+                  )}
+
+                  <BriefPanel items={itemsToDisplay} />
+
+                  {activeCallData?.proposal?.client_message_draft && (
+                    <div className="mt-6 pt-4 border-t border-border">
+                      <div className="flex items-center gap-2 text-xs font-mono font-semibold text-foreground mb-2">
+                        <MessageSquare className="w-3.5 h-3.5 text-primary" />
+                        DRAFTED CLIENT CONFIRMATION MESSAGE
+                      </div>
+                      <div className="p-3 rounded-lg bg-muted/40 border border-border text-xs text-foreground/90 font-sans whitespace-pre-line">
+                        {activeCallData.proposal.client_message_draft}
+                      </div>
+                    </div>
+                  )}
                 </div>
-
-                {activeCallData?.router_result && (
-                  <div className="mb-4 p-3 rounded-lg bg-primary/10 border border-primary/20 text-xs flex items-center justify-between">
-                    <div>
-                      <span className="font-bold text-foreground">Detected Intent: </span>
-                      <span className="font-mono text-primary font-semibold uppercase">{activeCallData.router_result.intent}</span>
-                    </div>
-                    <span className="text-muted-foreground">
-                      Confidence: {(activeCallData.router_result.confidence * 100).toFixed(0)}%
-                    </span>
+              ) : (
+                /* Empty State when no active call is selected */
+                <div className="rounded-xl border border-dashed border-border bg-card/50 p-12 text-center flex flex-col items-center justify-center min-h-[400px]">
+                  <div className="w-14 h-14 rounded-2xl bg-muted/40 flex items-center justify-center mb-4 text-muted-foreground">
+                    <FileText className="w-7 h-7 text-primary/70" />
                   </div>
-                )}
-
-                <BriefPanel items={itemsToDisplay} />
-
-                {activeCallData?.proposal?.client_message_draft && (
-                  <div className="mt-6 pt-4 border-t border-border">
-                    <div className="flex items-center gap-2 text-xs font-mono font-semibold text-foreground mb-2">
-                      <MessageSquare className="w-3.5 h-3.5 text-primary" />
-                      DRAFTED CLIENT CONFIRMATION MESSAGE
-                    </div>
-                    <div className="p-3 rounded-lg bg-muted/40 border border-border text-xs text-foreground/90 font-sans whitespace-pre-line">
-                      {activeCallData.proposal.client_message_draft}
-                    </div>
-                  </div>
-                )}
-              </div>
+                  <h3 className="font-display font-semibold text-lg text-foreground mb-2">
+                    No Call Proposal Selected
+                  </h3>
+                  <p className="text-xs text-muted-foreground max-w-sm mb-6 leading-relaxed">
+                    Upload an audio recording on the left or select a past submission from history to view its AI proposal, task breakdown, and drafted client message.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </Container>
