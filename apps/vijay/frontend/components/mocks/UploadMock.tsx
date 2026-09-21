@@ -30,6 +30,9 @@ export function UploadMock({ onComplete, onUploadSuccess }: UploadMockProps) {
     }
   }
 
+  const [agentLogs, setAgentLogs] = useState<string[]>([])
+  const [agentProgress, setAgentProgress] = useState(0)
+
   const handleStartUpload = async () => {
     if (!selectedFile) return
     if (!consent) {
@@ -41,6 +44,8 @@ export function UploadMock({ onComplete, onUploadSuccess }: UploadMockProps) {
       setErrorMessage(null)
       setStatusStep("uploading")
       setUploadProgress(0)
+      setAgentLogs([])
+      setAgentProgress(0)
 
       // Set user ID on API client
       api.setUserId(userId || null)
@@ -98,8 +103,16 @@ export function UploadMock({ onComplete, onUploadSuccess }: UploadMockProps) {
           isDone = true
           setStatusStep("processing_agent")
 
-          // 3. Process Call with Vertex AI Agent
-          const agentRes = await api.processAgent(res.submission_id)
+          // 3. Process Call with Real HTTP Streaming Vertex AI Agent
+          setAgentLogs([])
+          setAgentProgress(10)
+          const agentRes = await api.processAgentStream(
+            res.submission_id,
+            (log) => {
+              setAgentLogs((prev) => [...prev, log.message])
+              setAgentProgress(log.percent)
+            }
+          )
           setStatusStep("completed")
 
           if (onComplete) {
@@ -129,7 +142,7 @@ export function UploadMock({ onComplete, onUploadSuccess }: UploadMockProps) {
           <span className="text-[11px] font-mono font-medium text-primary uppercase">
             {statusStep === "uploading" && "Uploading..."}
             {statusStep === "transcribing" && "WhipScribe Transcribing..."}
-            {statusStep === "processing_agent" && "Vertex AI Agent..."}
+            {statusStep === "processing_agent" && "Vertex AI Agent Streaming..."}
             {statusStep === "completed" && "Done"}
           </span>
         )}
@@ -197,10 +210,39 @@ export function UploadMock({ onComplete, onUploadSuccess }: UploadMockProps) {
           </div>
         )}
 
+        {/* Real-time Streaming Agent Console */}
         {statusStep === "processing_agent" && (
-          <div className="flex items-center gap-2 text-xs font-mono text-primary p-2.5 rounded-lg bg-primary/10 border border-primary/20">
-            <Loader2 className="w-4 h-4 animate-spin" />
-            <span>Vertex AI Agent: Running RouterAgent & Playbook synthesis...</span>
+          <div className="space-y-2 rounded-xl bg-slate-950 p-4 font-mono text-xs text-slate-200 border border-slate-800 shadow-inner">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="font-semibold text-emerald-400">Vertex AI Agent Live Stream</span>
+              </div>
+              <span className="text-[10px] text-slate-400 font-mono">{agentProgress}%</span>
+            </div>
+
+            <div className="w-full bg-slate-800 rounded-full h-1 overflow-hidden">
+              <div
+                className="bg-emerald-500 h-full transition-all duration-300"
+                style={{ width: `${agentProgress}%` }}
+              />
+            </div>
+
+            <div className="max-h-36 overflow-y-auto space-y-1 font-mono text-[11px] leading-relaxed pt-1">
+              {agentLogs.length === 0 ? (
+                <div className="text-slate-500 flex items-center gap-2">
+                  <Loader2 className="w-3 h-3 animate-spin text-emerald-400" />
+                  <span>Connecting to Vertex AI Agent stream...</span>
+                </div>
+              ) : (
+                agentLogs.map((msg, i) => (
+                  <div key={i} className="text-slate-300 flex items-start gap-1.5">
+                    <span className="text-emerald-500 font-bold select-none">&gt;</span>
+                    <span>{msg}</span>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         )}
 

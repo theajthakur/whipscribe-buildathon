@@ -78,6 +78,63 @@ export const api = {
     return res.data
   },
 
+  async processAgentStream(
+    submissionId: string,
+    onLog?: (log: { step: string; message: string; percent: number }) => void,
+    overrideIntent?: string
+  ): Promise<AgentProcessResponse> {
+    try {
+      const response = await fetch("/api/process-call-stream", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ submissionId, overrideIntent }),
+      })
+
+      if (!response.body) {
+        return this.processAgent(submissionId, overrideIntent)
+      }
+
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      let resultData: AgentProcessResponse | null = null
+      let buffer = ""
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split("\n\n")
+        buffer = lines.pop() || ""
+
+        for (const line of lines) {
+          const trimmed = line.trim()
+          if (trimmed.startsWith("data: ")) {
+            try {
+              const parsed = JSON.parse(trimmed.slice(6))
+              if (parsed.type === "log" && onLog) {
+                onLog({ step: parsed.step, message: parsed.message, percent: parsed.percent })
+              } else if (parsed.type === "result") {
+                resultData = parsed.result
+              }
+            } catch (e) {
+              console.error("SSE JSON parse error", e)
+            }
+          }
+        }
+      }
+
+      if (resultData) {
+        return resultData
+      }
+      return this.processAgent(submissionId, overrideIntent)
+    } catch (err) {
+      console.warn("Stream error, falling back to standard POST", err)
+      return this.processAgent(submissionId, overrideIntent)
+    }
+  },
+
   async getCallDetails(callId: string) {
     const res = await apiClient.get(`/api/calls/${callId}`)
     return res.data
