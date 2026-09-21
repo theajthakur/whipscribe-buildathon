@@ -149,12 +149,13 @@ class Segment:
 
     @classmethod
     def from_dict(cls, d: dict) -> "Segment":
+        raw_words = d.get("words") or []
         return cls(
-            start=d["start"],
-            end=d["end"],
-            text=d["text"],
+            start=d.get("start", 0.0),
+            end=d.get("end", 0.0),
+            text=d.get("text", ""),
             speaker=d.get("speaker"),
-            words=[Word.from_dict(w) for w in d.get("words", [])],
+            words=[Word.from_dict(w) for w in raw_words if isinstance(w, dict)],
         )
 
 
@@ -170,10 +171,11 @@ class TranscriptResult:
 
     @classmethod
     def from_dict(cls, d: dict) -> "TranscriptResult":
+        raw_segments = d.get("segments") or []
         return cls(
             text=d.get("text", ""),
             language=d.get("language"),
-            segments=[Segment.from_dict(s) for s in d.get("segments", [])],
+            segments=[Segment.from_dict(s) for s in raw_segments if isinstance(s, dict)],
             speech_detected=d.get("speech_detected"),
             speech_ratio=d.get("speech_ratio"),
             suggestion=d.get("suggestion"),
