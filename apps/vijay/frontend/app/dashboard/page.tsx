@@ -24,6 +24,7 @@ import {
   Sparkles,
   Copy,
   Check,
+  ChevronDown,
 } from "lucide-react"
 
 export interface SubmissionItem {
@@ -55,6 +56,8 @@ function DashboardContent() {
   const [loadingHistory, setLoadingHistory] = useState(true)
   const [processingSubId, setProcessingSubId] = useState<string | null>(null)
   const [copiedDraft, setCopiedDraft] = useState(false)
+  const [isUploaderOpen, setIsUploaderOpen] = useState(false)
+
 
   useEffect(() => {
     if (audioData?.audioUrl) {
@@ -259,18 +262,45 @@ function DashboardContent() {
 
 
             
-            {/* 1. New Recording Box */}
-            <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="font-display font-semibold text-xs text-foreground flex items-center gap-1.5 uppercase tracking-wider">
-                  <Plus className="w-3.5 h-3.5 text-primary" /> New Call Recording
-                </h2>
+            {/* 1. New Recording Collapsible Box */}
+            <div className="rounded-xl border border-border bg-card p-3.5 shadow-sm transition-all duration-200">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
+                    <Plus className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h2 className="font-display font-semibold text-xs text-foreground uppercase tracking-wider">
+                      New Call Recording
+                    </h2>
+                    {!isUploaderOpen && (
+                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                        Click extend to upload file
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setIsUploaderOpen(!isUploaderOpen)}
+                  className="px-2.5 py-1 rounded-lg text-xs font-medium bg-primary/10 text-primary hover:bg-primary/20 transition-colors flex items-center gap-1.5"
+                  title={isUploaderOpen ? "Collapse upload zone" : "Extend upload zone"}
+                >
+                  <span>{isUploaderOpen ? "Collapse" : "Extend"}</span>
+                  <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isUploaderOpen ? "rotate-180" : ""}`} />
+                </button>
               </div>
-              <UploadMock
-                onComplete={handleUploadComplete}
-                onUploadSuccess={fetchSubmissions}
-              />
+
+              {isUploaderOpen && (
+                <div className="mt-3.5 pt-3 border-t border-border">
+                  <UploadMock
+                    onComplete={handleUploadComplete}
+                    onUploadSuccess={fetchSubmissions}
+                  />
+                </div>
+              )}
             </div>
+
 
             {/* 2. Submissions DB History List */}
             <div className="rounded-xl border border-border bg-card p-4 shadow-sm flex flex-col">
