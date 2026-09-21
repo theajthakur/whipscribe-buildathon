@@ -3,13 +3,12 @@
 import { useState } from "react"
 import { Container } from "@/components/ui/Container"
 import { Heading } from "@/components/ui/Heading"
-import { Badge } from "@/components/ui/Badge"
 import { AuthCta } from "@/components/auth/AuthCta"
 import { TranscriptPanel } from "@/components/mocks/TranscriptPanel"
 import { BriefPanel } from "@/components/mocks/BriefPanel"
 import { useHeroTimeline } from "@/components/motion/useHeroTimeline"
 import { mockTranscript, mockBriefItems } from "@/data/mockContent"
-import { Sparkles, ArrowRight, ShieldCheck, FileAudio, Sparkle } from "lucide-react"
+import { ArrowRight, ShieldCheck, FileAudio } from "lucide-react"
 
 export function Hero() {
   const containerRef = useHeroTimeline()
@@ -31,12 +30,9 @@ export function Hero() {
       <Container>
         {/* Top Centered Hero Copy */}
         <div data-hero-copy className="max-w-4xl mx-auto text-center flex flex-col items-center space-y-6">
-          <div data-hero-badge className="inline-flex items-center">
-            <Badge variant="primary" className="px-3.5 py-1 text-xs tracking-wider font-mono gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-accent" />
-              Built for Freelancers & Agencies
-            </Badge>
-          </div>
+          <span className="text-xs font-mono font-semibold uppercase tracking-wider text-primary">
+            Built for Freelancers & Agencies
+          </span>
 
           <Heading
             as="h1"
@@ -77,9 +73,8 @@ export function Hero() {
               <span className="w-3 h-3 rounded-full bg-yellow-400/80 inline-block" />
               <span className="w-3 h-3 rounded-full bg-green-400/80 inline-block" />
             </div>
-            <div className="text-xs font-mono font-medium text-muted-foreground flex items-center gap-2">
-              <Sparkle className="w-3.5 h-3.5 text-primary" />
-              <span>CallBrief Interactive Demo — Raw Audio vs AI Brief</span>
+            <div className="text-xs font-mono font-medium text-muted-foreground">
+              CallBrief Interactive Studio — Raw Audio vs AI Brief
             </div>
             <div className="w-12" /> {/* Spacer */}
           </div>
@@ -101,8 +96,7 @@ export function Hero() {
             {/* Right: Extracted Scope Brief */}
             <div data-hero-brief className="flex flex-col gap-2">
               <div className="flex items-center justify-between text-xs font-mono font-semibold text-muted-foreground px-1 pb-1 border-b border-border/50">
-                <span className="flex items-center gap-1.5 text-foreground">
-                  <Sparkles className="w-3.5 h-3.5 text-accent" />
+                <span className="text-foreground">
                   Generated Scope Brief
                 </span>
                 <span className="text-[11px] text-primary font-sans">Click timestamp chip to sync</span>

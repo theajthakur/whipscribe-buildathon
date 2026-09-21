@@ -13,9 +13,9 @@ export function CallTypes() {
     <Section bg="card" id="call-types">
       <Container>
         <div className="max-w-3xl mb-12">
-          <Badge variant="primary" className="mb-4">
+          <span className="text-xs font-mono font-semibold uppercase tracking-wider text-primary mb-2 block">
             Adaptive Processing
-          </Badge>
+          </span>
           <Heading as="h2" size="lg" className="mb-4">
             Output that fits the exact conversation
           </Heading>

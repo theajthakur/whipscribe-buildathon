@@ -2,7 +2,6 @@
 
 import { Container } from "@/components/ui/Container"
 import { Heading } from "@/components/ui/Heading"
-import { Badge } from "@/components/ui/Badge"
 import { PinnedSteps, PinnedStep } from "@/components/motion/PinnedSteps"
 import { steps } from "@/data/steps"
 import { UploadMock } from "@/components/mocks/UploadMock"
@@ -58,9 +57,9 @@ export function HowItWorks() {
     <section id="how-it-works" className="relative py-16 bg-background">
       <Container>
         <div className="max-w-2xl mb-8">
-          <Badge variant="primary" className="mb-3">
+          <span className="text-xs font-mono font-semibold uppercase tracking-wider text-primary mb-2 block">
             Workflow
-          </Badge>
+          </span>
           <Heading as="h2" size="lg" className="mb-3">
             Four steps from raw audio to clean brief
           </Heading>

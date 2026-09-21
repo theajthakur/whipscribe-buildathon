@@ -2,7 +2,6 @@
 
 import { Container } from "@/components/ui/Container"
 import { Heading } from "@/components/ui/Heading"
-import { Badge } from "@/components/ui/Badge"
 import { Section } from "@/components/ui/Section"
 import { Reveal } from "@/components/motion/Reveal"
 import { features, soonFeatures, Feature } from "@/data/features"
@@ -15,7 +14,6 @@ import { ClientMemoryCard } from "@/components/mocks/ClientMemoryCard"
 import { MessageDraft } from "@/components/mocks/MessageDraft"
 import { ToolList } from "@/components/mocks/ToolList"
 import { mockTranscript, mockBriefItems } from "@/data/mockContent"
-import { Sparkles } from "lucide-react"
 
 function renderFeatureMock(mockId: string) {
   switch (mockId) {
@@ -56,9 +54,9 @@ export function FeatureShowcase() {
     <Section bg="default" id="features">
       <Container>
         <div className="max-w-3xl mb-16 text-left">
-          <Badge variant="primary" className="mb-4">
+          <span className="text-xs font-mono font-semibold uppercase tracking-wider text-primary mb-2 block">
             Feature Deep Dive
-          </Badge>
+          </span>
           <Heading as="h2" size="lg" className="mb-4">
             Designed for real freelance workflows
           </Heading>
@@ -75,15 +73,17 @@ export function FeatureShowcase() {
             return (
               <Reveal key={feature.id} delay={0.1}>
                 <div
-                  className={`grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center ${isTextLeft ? "" : "lg:flex-row-reverse"
-                    }`}
+                  className={`grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center ${
+                    isTextLeft ? "" : "lg:flex-row-reverse"
+                  }`}
                 >
                   {/* Copy */}
                   <div
-                    className={`lg:col-span-5 ${isTextLeft ? "lg:order-1" : "lg:order-2"
-                      }`}
+                    className={`lg:col-span-5 ${
+                      isTextLeft ? "lg:order-1" : "lg:order-2"
+                    }`}
                   >
-                    <span className="text-xs font-mono text-primary font-bold tracking-wider mb-2 block">
+                    <span className="text-xs font-mono text-primary font-bold uppercase tracking-wider mb-2 block">
                       Feature 0{idx + 1}
                     </span>
                     <Heading as="h3" size="md" className="mb-4">
@@ -96,8 +96,9 @@ export function FeatureShowcase() {
 
                   {/* UI Mock Panel */}
                   <div
-                    className={`lg:col-span-7 ${isTextLeft ? "lg:order-2" : "lg:order-1"
-                      }`}
+                    className={`lg:col-span-7 ${
+                      isTextLeft ? "lg:order-2" : "lg:order-1"
+                    }`}
                   >
                     <div className="rounded-2xl border border-border bg-card/60 p-4 shadow-sm hover:border-primary/30 transition-colors">
                       {renderFeatureMock(feature.mockId)}
@@ -113,9 +114,9 @@ export function FeatureShowcase() {
         <div className="mt-28 pt-16 border-t border-border">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
             <div className="lg:col-span-5">
-              <Badge variant="warning" className="mb-3">
-                <Sparkles className="w-3.5 h-3.5 mr-1" /> Roadmap
-              </Badge>
+              <span className="text-xs font-mono font-semibold uppercase tracking-wider text-warning mb-2 block">
+                Roadmap
+              </span>
               <Heading as="h3" size="md" className="mb-3">
                 Integrations coming soon
               </Heading>
