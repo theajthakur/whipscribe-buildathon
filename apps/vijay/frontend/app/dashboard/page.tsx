@@ -138,21 +138,21 @@ function DashboardContent() {
 
   const itemsToDisplay = activeCallData?.proposal
     ? [
-        ...(activeCallData.proposal.requirements || []).map((r: any) => ({
-          id: r.id || Math.random().toString(),
-          type: "requirement" as const,
-          text: r.text,
-          time: r.time,
-          transcriptRef: "t1",
-        })),
-        ...(activeCallData.proposal.tasks || []).map((t: any) => ({
-          id: t.id || Math.random().toString(),
-          type: "task" as const,
-          text: `${t.title} [Effort: ${t.effort || "M"}]`,
-          time: t.time,
-          transcriptRef: "t2",
-        })),
-      ]
+      ...(activeCallData.proposal.requirements || []).map((r: any) => ({
+        id: r.id || Math.random().toString(),
+        type: "requirement" as const,
+        text: r.text,
+        time: r.time,
+        transcriptRef: "t1",
+      })),
+      ...(activeCallData.proposal.tasks || []).map((t: any) => ({
+        id: t.id || Math.random().toString(),
+        type: "task" as const,
+        text: `${t.title} [Effort: ${t.effort || "M"}]`,
+        time: t.time,
+        transcriptRef: "t2",
+      })),
+    ]
     : []
 
   const handleAudioTimeUpdate = useCallback(
@@ -283,11 +283,10 @@ function DashboardContent() {
                         <div
                           key={sub.id}
                           onClick={() => handleSelectSubmission(sub)}
-                          className={`p-3 rounded-lg border text-xs cursor-pointer transition-colors ${
-                            isSelected
+                          className={`p-3 rounded-lg border text-xs cursor-pointer transition-colors ${isSelected
                               ? "border-primary/50 bg-primary/10"
                               : "border-border bg-muted/20 hover:border-border/80 hover:bg-muted/40"
-                          }`}
+                            }`}
                         >
                           <div className="flex items-center justify-between mb-1">
                             <span className="font-semibold text-foreground truncate max-w-[200px] flex items-center gap-1.5">
@@ -413,7 +412,7 @@ function DashboardContent() {
       <AudioPlayer
         audioUrl={audioData?.audioUrl || null}
         audioRef={audioRef}
-        sourceLabel={audioData?.source === "whipscribe" ? "WhipScribe API Stream" : "Local Audio"}
+        sourceLabel="WhipScribe API Stream"
         filename={selectedFilename || "Recording Audio"}
         onTimeUpdate={handleAudioTimeUpdate}
       />

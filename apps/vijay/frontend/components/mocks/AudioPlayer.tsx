@@ -7,7 +7,6 @@ import {
   Volume2,
   VolumeX,
   Music,
-  ShieldCheck,
   RotateCcw,
   RotateCw,
   X,
@@ -91,7 +90,7 @@ export function AudioPlayer({
       audio.removeEventListener("pause", handlePause)
       audio.removeEventListener("ended", handleEnded)
     }
-  }, [audioRef, audioUrl])
+  }, [audioRef, audioUrl, onTimeUpdate])
 
   const togglePlay = () => {
     const audio = audioRef.current
@@ -151,28 +150,90 @@ export function AudioPlayer({
     <>
       <audio ref={audioRef} src={audioUrl} preload="metadata" />
 
-      {/* Responsive Fixed Bottom Modern Audio Player Bar */}
+      {/* Fixed Bottom Audio Player Container */}
       <div className="fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-md border-t border-border shadow-[0_-8px_30px_rgb(0,0,0,0.15)] transition-all duration-300 font-sans">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex flex-col md:flex-row items-center justify-between gap-3 md:gap-6">
+        
+        {/* MOBILE LAYOUT (md:hidden) */}
+        <div className="flex md:hidden flex-col px-4 py-2.5">
+          {/* Top Row: Icon + Info <---> Play/Pause + Mute + Close */}
+          <div className="flex items-center justify-between gap-3">
+            {/* Left: Icon | Title & Subtitle */}
+            <div className="flex items-center gap-2.5 min-w-0 flex-1">
+              <div className="w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
+                <Music className="w-4.5 h-4.5 text-primary" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-semibold text-foreground truncate">{filename}</p>
+                <p className="text-[11px] text-primary truncate font-medium">{sourceLabel}</p>
+              </div>
+            </div>
+
+            {/* Right: Play/Pause | Mute | Close */}
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                onClick={togglePlay}
+                className="w-9 h-9 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 flex items-center justify-center shadow-md transition-transform active:scale-95"
+                title={isPlaying ? "Pause" : "Play"}
+              >
+                {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
+              </button>
+
+              <button
+                onClick={toggleMute}
+                className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                title={isMuted ? "Unmute" : "Mute"}
+              >
+                {isMuted ? <VolumeX className="w-4 h-4 text-destructive" /> : <Volume2 className="w-4 h-4" />}
+              </button>
+
+              <button
+                onClick={() => {
+                  setIsVisible(false)
+                  if (onClose) onClose()
+                }}
+                className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                title="Close audio player"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Bottommost Row: Audio Progress Timeline Bar */}
+          <div className="flex items-center gap-2.5 w-full font-mono text-[10px] text-muted-foreground mt-2">
+            <span className="w-8 text-right shrink-0">{formatSecondsToTime(currentTime)}</span>
+            <input
+              type="range"
+              min={0}
+              max={duration || 100}
+              value={currentTime}
+              onChange={handleSeek}
+              className="w-full h-1.5 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
+            />
+            <span className="w-8 shrink-0">{formatSecondsToTime(duration)}</span>
+          </div>
+        </div>
+
+        {/* DESKTOP LAYOUT (hidden md:flex) */}
+        <div className="hidden md:flex max-w-7xl mx-auto px-4 py-3 flex-row items-center justify-between gap-6">
           {/* Left: Audio Info */}
-          <div className="flex items-center gap-3 w-full md:w-1/4 shrink-0">
+          <div className="flex items-center gap-3 w-1/4 shrink-0">
             <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
               <Music className="w-5 h-5 text-primary" />
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-xs font-semibold text-foreground truncate">{filename}</p>
               <div className="flex items-center gap-1.5 mt-0.5">
-                <span className="text-[10px] font-mono px-2 py-0.2 rounded-full bg-primary/10 border border-primary/20 text-primary font-semibold flex items-center gap-1">
-                  <ShieldCheck className="w-2.5 h-2.5" /> {sourceLabel}
+                <span className="text-xs text-primary font-medium">
+                  {sourceLabel}
                 </span>
               </div>
             </div>
           </div>
 
           {/* Center: Playback Controls & Timeline Slider */}
-          <div className="flex flex-col items-center gap-1.5 w-full md:w-2/4">
+          <div className="flex flex-col items-center gap-1.5 w-2/4">
             <div className="flex items-center gap-4">
-              {/* Skip -10s */}
               <button
                 onClick={() => skipTime(-10)}
                 className="p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
@@ -181,7 +242,6 @@ export function AudioPlayer({
                 <RotateCcw className="w-4 h-4" />
               </button>
 
-              {/* Play / Pause Toggle Button */}
               <button
                 onClick={togglePlay}
                 className="w-10 h-10 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 flex items-center justify-center transition-all shadow-md shadow-primary/25 hover:scale-105 active:scale-95"
@@ -190,7 +250,6 @@ export function AudioPlayer({
                 {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 ml-0.5" />}
               </button>
 
-              {/* Skip +10s */}
               <button
                 onClick={() => skipTime(10)}
                 className="p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
@@ -200,7 +259,6 @@ export function AudioPlayer({
               </button>
             </div>
 
-            {/* Timeline Slider with Time Display */}
             <div className="flex items-center gap-3 w-full font-mono text-[11px] text-muted-foreground">
               <span className="w-10 text-right shrink-0">{formatSecondsToTime(currentTime)}</span>
               <input
@@ -216,7 +274,7 @@ export function AudioPlayer({
           </div>
 
           {/* Right: Volume & Minimize Controls */}
-          <div className="flex items-center justify-end gap-3 w-full md:w-1/4 shrink-0">
+          <div className="flex items-center justify-end gap-3 w-1/4 shrink-0">
             <div className="flex items-center gap-2">
               <button
                 onClick={toggleMute}
@@ -236,7 +294,6 @@ export function AudioPlayer({
               />
             </div>
 
-            {/* Close / Minimize Button */}
             <button
               onClick={() => {
                 setIsVisible(false)
