@@ -1,4 +1,7 @@
-import { UserButton } from "@clerk/nextjs"
+"use client"
+
+import { useState } from "react"
+import { UserButton, useAuth } from "@clerk/nextjs"
 import { Container } from "@/components/ui/Container"
 import { Heading } from "@/components/ui/Heading"
 import { Badge } from "@/components/ui/Badge"
@@ -6,9 +9,37 @@ import { UploadMock } from "@/components/mocks/UploadMock"
 import { BriefPanel } from "@/components/mocks/BriefPanel"
 import { mockBriefItems } from "@/data/mockContent"
 import Link from "next/link"
-import { Plus, Clock, FileText, ArrowLeft } from "lucide-react"
+import { Plus, Clock, FileText, ArrowLeft, Sparkles, MessageSquare } from "lucide-react"
 
 export default function DashboardPage() {
+  const { userId } = useAuth()
+  const [activeCallData, setActiveCallData] = useState<any>(null)
+
+  const handleUploadComplete = (agentResponse: any) => {
+    if (agentResponse && agentResponse.proposal) {
+      setActiveCallData(agentResponse)
+    }
+  }
+
+  const itemsToDisplay = activeCallData?.proposal
+    ? [
+        ...activeCallData.proposal.requirements.map((r: any) => ({
+          id: r.id,
+          type: "requirement" as const,
+          text: r.text,
+          time: r.time,
+          transcriptRef: "t1",
+        })),
+        ...activeCallData.proposal.tasks.map((t: any) => ({
+          id: t.id,
+          type: "task" as const,
+          text: `${t.title} [Effort: ${t.effort}]`,
+          time: t.time,
+          transcriptRef: "t2",
+        })),
+      ]
+    : mockBriefItems
+
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
       {/* Header */}
@@ -44,7 +75,7 @@ export default function DashboardPage() {
                 Your Call Briefs
               </Heading>
               <p className="text-muted-foreground text-sm">
-                Upload call recordings or audio notes to generate structured briefs and task lists.
+                Upload call recordings or audio notes to generate structured briefs and task lists with WhipScribe & Vertex AI.
               </p>
             </div>
           </div>
@@ -54,27 +85,52 @@ export default function DashboardPage() {
             <div className="lg:col-span-5 space-y-6">
               <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
                 <h2 className="font-display font-semibold text-lg text-foreground mb-4 flex items-center gap-2">
-                  <Plus className="w-4 h-4 text-primary" /> New Call Brief
+                  <Plus className="w-4 h-4 text-primary" /> New Call Recording
                 </h2>
-                <UploadMock />
+                <UploadMock onComplete={handleUploadComplete} />
               </div>
             </div>
 
-            {/* Recent Briefs / Mock View */}
+            {/* Active Brief View */}
             <div className="lg:col-span-7 space-y-6">
               <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
                 <div className="flex items-center justify-between mb-4 pb-3 border-b border-border">
                   <div className="flex items-center gap-2">
                     <FileText className="w-4 h-4 text-primary" />
                     <h2 className="font-display font-semibold text-base text-foreground">
-                      Acme E-commerce Redesign Call
+                      {activeCallData ? "Processed Call Proposal" : "Acme E-commerce Redesign Call"}
                     </h2>
                   </div>
                   <Badge variant="success" className="text-xs">
-                    <Clock className="w-3 h-3 mr-1" /> Today, 10:42 AM
+                    <Clock className="w-3 h-3 mr-1" /> Today
                   </Badge>
                 </div>
-                <BriefPanel items={mockBriefItems} />
+
+                {activeCallData?.router_result && (
+                  <div className="mb-4 p-3 rounded-lg bg-primary/10 border border-primary/20 text-xs flex items-center justify-between">
+                    <div>
+                      <span className="font-bold text-foreground">Detected Intent: </span>
+                      <span className="font-mono text-primary font-semibold uppercase">{activeCallData.router_result.intent}</span>
+                    </div>
+                    <span className="text-muted-foreground">
+                      Confidence: {(activeCallData.router_result.confidence * 100).toFixed(0)}%
+                    </span>
+                  </div>
+                )}
+
+                <BriefPanel items={itemsToDisplay} />
+
+                {activeCallData?.proposal?.client_message_draft && (
+                  <div className="mt-6 pt-4 border-t border-border">
+                    <div className="flex items-center gap-2 text-xs font-mono font-semibold text-foreground mb-2">
+                      <MessageSquare className="w-3.5 h-3.5 text-primary" />
+                      DRAFTED CLIENT CONFIRMATION MESSAGE
+                    </div>
+                    <div className="p-3 rounded-lg bg-muted/40 border border-border text-xs text-foreground/90 font-sans whitespace-pre-line">
+                      {activeCallData.proposal.client_message_draft}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
