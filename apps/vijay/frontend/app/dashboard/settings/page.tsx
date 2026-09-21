@@ -230,55 +230,62 @@ export default function SettingsPage() {
               </form>
 
               {/* Live Cost Calculation Interactive Simulator */}
-              <div className="lg:col-span-5 bg-card border border-border rounded-xl p-5 shadow-sm space-y-4 flex flex-col justify-between">
-                <div className="h-full">
+              <div className="lg:col-span-5 bg-card border border-border rounded-xl p-5 shadow-sm flex flex-col justify-between space-y-4">
+                <div>
                   <div className="flex items-center gap-2 pb-3 border-b border-border">
                     <Calculator className="w-4 h-4 text-primary" />
                     <h3 className="font-display font-semibold text-sm text-foreground">
                       Live Cost Calculator
                     </h3>
                   </div>
-                  <div className="flex h-full w-full flex-col justify-between">
-                    <p className="text-xs text-muted-foreground mt-3 leading-relaxed">
-                      Test how CallBrief will calculate total project quotes when tasks are extracted from audio calls.
-                    </p>
+                  <p className="text-xs text-muted-foreground mt-3 leading-relaxed">
+                    Test how CallBrief will calculate total project quotes when tasks are extracted from audio calls.
+                  </p>
+                </div>
 
-                    <div className="mt-4 p-4 rounded-xl bg-primary/10 border border-primary/20 space-y-3">
+                <div className="space-y-4 mt-auto">
+                  <div className="p-4 rounded-xl bg-primary/10 border border-primary/20 space-y-3">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground font-mono">User Rate:</span>
+                      <span className="font-mono font-bold text-foreground">{symbol}{hourlyRate}/hr</span>
+                    </div>
+
+                    <div className="space-y-1.5">
                       <div className="flex items-center justify-between text-xs">
-                        <span className="text-muted-foreground font-mono">User Rate:</span>
-                        <span className="font-mono font-bold text-foreground">{symbol}{hourlyRate}/hr</span>
+                        <span className="text-muted-foreground font-mono">Expected Work Hours:</span>
+                        <span className="font-mono font-bold text-primary">{testHours} hours</span>
                       </div>
-
-                      <div className="space-y-1.5">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-muted-foreground font-mono">Expected Work Hours:</span>
-                          <span className="font-mono font-bold text-primary">{testHours} hours</span>
-                        </div>
-                        <input
-                          type="range"
-                          min="0"
-                          max="100"
-                          step="0.5"
-                          value={expToPercent(testHours, 5, 500)}
-                          onChange={(e) => setTestHours(percentToExp(parseFloat(e.target.value), 5, 500))}
-                          className="w-full accent-primary h-2 bg-muted rounded-lg cursor-pointer"
-                        />
-                        <div className="flex justify-between text-[10px] font-mono text-muted-foreground">
-                          <span>5h</span>
-                          <span>Exponential 5–500h</span>
-                          <span>500h</span>
-                        </div>
-                      </div>
-
-                      <div className="pt-2 border-t border-primary/20 flex items-center justify-between">
-                        <span className="text-xs font-semibold text-foreground uppercase tracking-wider">
-                          Calculated Quote:
-                        </span>
-                        <span className="font-mono text-base font-extrabold text-primary">
-                          {symbol}{calculatedTotal.toLocaleString()} {currency}
-                        </span>
+                      <input
+                        type="range"
+                        min="0"
+                        max="100"
+                        step="0.5"
+                        value={expToPercent(testHours, 5, 500)}
+                        onChange={(e) => setTestHours(percentToExp(parseFloat(e.target.value), 5, 500))}
+                        className="w-full accent-primary h-2 bg-muted rounded-lg cursor-pointer"
+                      />
+                      <div className="flex justify-between text-[10px] font-mono text-muted-foreground">
+                        <span>5h</span>
+                        <span>Exponential 5–500h</span>
+                        <span>500h</span>
                       </div>
                     </div>
+
+                    <div className="pt-2 border-t border-primary/20 flex items-center justify-between">
+                      <span className="text-xs font-semibold text-foreground uppercase tracking-wider">
+                        Calculated Quote:
+                      </span>
+                      <span className="font-mono text-base font-extrabold text-primary">
+                        {symbol}{calculatedTotal.toLocaleString()} {currency}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="p-3 rounded-lg bg-muted/30 border border-border text-[11px] text-muted-foreground flex items-start gap-2">
+                    <Sparkles className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                    <span>
+                      Formula: <code className="font-mono text-foreground">Quote = Hourly Rate × Total Task Hours</code>.
+                    </span>
                   </div>
                 </div>
               </div>
