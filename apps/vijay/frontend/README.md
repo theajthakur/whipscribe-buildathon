@@ -1,36 +1,62 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CallBrief Frontend
 
-## Getting Started
+The Next.js 16 (App Router) web application for **CallBrief** — the AI client call assistant for freelancers.
 
-First, run the development server:
+## 🚀 Stack & Technologies
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- **Framework**: Next.js 16 (App Router with Turbopack)
+- **Styling**: Tailwind CSS v4 with custom CSS token system (`globals.css`)
+- **Typography**: Sora (headings), Figtree (body), IBM Plex Mono (transcripts & timestamps)
+- **Animations**: GSAP & `@gsap/react` for hero timelines and pinned scroll steps
+- **Authentication**: `@clerk/nextjs` with custom modal authentication flow (`AuthModal.tsx` & `AuthModalContext.tsx`) and unblocked public landing page
+- **Icons**: Lucide React
+
+## 📁 Architecture Overview
+
+```text
+frontend/
+├── app/
+│   ├── dashboard/       # Protected workspace dashboard
+│   ├── sso-callback/    # Google SSO OAuth redirect handler
+│   ├── globals.css      # CSS variables & design tokens
+│   ├── layout.tsx       # Root layout with Clerk & AuthModalProvider
+│   └── page.tsx         # Main landing page
+├── components/
+│   ├── auth/            # AuthModal, AuthCta, AuthModalContext
+│   ├── landing/         # Hero, CallTypes, HowItWorks, FeatureShowcase, FinalCta
+│   ├── layout/          # Navbar, Footer, NavAuth
+│   ├── mocks/           # Interactive UI panels (TranscriptPanel, BriefPanel, etc.)
+│   ├── motion/          # GSAP animation hooks and PinnedSteps scroll container
+│   └── ui/              # Design primitives (Button, Heading, Container, Section)
+├── data/                # Mock data & features registry
+└── lib/                 # Utilities (cn.ts, gsap.ts)
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🔐 Auth & Navigation Flow
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- **Public Landing Page**: `/` is open to everyone without blocking authentication modals or redirects.
+- **Custom Auth Modal**: Clicking "Sign In", "Start Free Trial", or any CTA opens a unified custom auth modal dialog supporting Google SSO and email/password credentials.
+- **Protected Workspace**: Authenticated users access `/dashboard` where they can manage call recordings, inspect AI-generated briefs, and edit timestamped action items.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 🛠️ Running Locally
 
-## Learn More
+1. Install dependencies:
+   ```bash
+   npm install
+   ```
 
-To learn more about Next.js, take a look at the following resources:
+2. Set up environment variables in `.env.local`:
+   ```env
+   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
+   CLERK_SECRET_KEY=sk_test_...
+   ```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+3. Run the development server:
+   ```bash
+   npm run dev
+   ```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+4. Build for production:
+   ```bash
+   npm run build
+   ```

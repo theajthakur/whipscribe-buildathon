@@ -1,8 +1,8 @@
-# Freelancer Call Assistant
+# Freelancer Call Assistant — CallBrief
 
 **Track 4 — Invent a workflow** · WhipScribe Buildathon · Vijay Singh
 
-A freelancer uploads a client call. An agent works out what kind of call it was, uses tools to produce the right output — brief, tasks, quote, reply message — and the freelancer reviews and edits everything before anything is saved or sent. Every item links to the moment in the recording it came from.
+A freelancer uploads a client call recording, voice note, or WhatsApp chat export. An agent works out what kind of call it was, uses tools to produce the right output — brief, tasks, quote, reply message — and the freelancer reviews and edits everything before anything is saved or sent. Every item links to the exact moment in the recording it came from.
 
 ---
 
@@ -93,60 +93,53 @@ flowchart TD
 
 ---
 
+## Architecture & Project Structure
+
+```text
+apps/vijay/
+├── backend/
+│   ├── whipscribe/      # Python SDK client for WhipScribe API
+│   │   ├── _http.py     # HTTP transport layer
+│   │   ├── account.py   # Account & balance endpoints
+│   │   ├── clips.py     # Audio clips & transcription endpoints
+│   │   └── client.py    # Main WhipScribeClient entrypoint
+│   └── .env             # Backend environment settings
+├── frontend/
+│   ├── app/             # Next.js App Router (Landing, Workspace, SSO Callback)
+│   ├── components/      # UI primitives, AuthModal, Hero, Mocks, Motion components
+│   ├── data/            # Features, steps, and call type definitions
+│   └── lib/             # Utility helpers
+├── README.md
+└── scope.md             # Project scope & specifications
+```
+
+---
+
 ## How to run
 
-> *This section will be filled in after Phase 1 is working.*
-
-**Requirements:** Node.js 20+, a WhipScribe API key.
-
+### Frontend Web App
 ```bash
-cd apps/vijay
-cp .env.example .env
-# Add your WHIPSCRIBE_API key to .env
+cd apps/vijay/frontend
 npm install
 npm run dev
+```
+
+### Backend WhipScribe Client
+```bash
+cd apps/vijay/backend
+python -m pip install -r requirements.txt
 ```
 
 ---
 
 ## What works right now
 
-- [ ] Phase 0: API docs read, exact response fields listed
-- [ ] Phase 1: Upload → transcript with speakers and timestamps
-- [ ] Phase 2: Discovery playbook — extraction, tasks, timeline, quote
-- [ ] Phase 3: Review screen — edit, delete, add, redo, approve
-- [ ] Phase 4: Router + inquiry playbook + other fallback
-- [ ] Phase 5: Client memory + change-request playbook
-- [ ] Phase 6: Polish + tested by 2–3 other freelancers
-- [ ] Phase 8: Demo recording + full README + vision
-
----
-
-## What does not work yet
-
-Everything above that is unchecked. This README is honest about what is unfinished.
-
----
-
-## Feedback from other freelancers
-
-> *To be filled in after Phase 6 testing.*
-
-| Person | How they handle calls today | What the agent got right | What they edited | Would they use it? |
-|---|---|---|---|---|
-| — | — | — | — | — |
-
----
-
-## What I learned building this
-
-> *To be filled in as I go.*
-
----
-
-## What AI tools produced and what I kept or changed
-
-> *To be filled in as I go. Example: "The agent extracted a task the client never mentioned. I added the timestamp-required guardrail because of this."*
+- [x] **WhipScribe API Client Module**: Python API client (`whipscribe` package) supporting file uploads, job polling, transcript retrieval, and balance checking.
+- [x] **Next.js 16 Web Application**: Built using App Router, Tailwind CSS v4, Sora & Figtree typography, and custom CSS design tokens.
+- [x] **Interactive Hero & Demo Showcase**: Side-by-side studio app window showing raw source transcripts synced live with generated scope briefs.
+- [x] **Adaptive Call Types & Workflow**: Features adaptive call classification, pinned scroll steps, and live product mock panels.
+- [x] **Modal Authentication System**: Unblocked public landing page with a custom single-form auth modal dialog supporting Google SSO and email/password credentials via Clerk.
+- [x] **Workspace Dashboard**: Protected workspace route (`/dashboard`) for managing incoming audio clips and reviewable briefs.
 
 ---
 
@@ -160,8 +153,3 @@ A year from now, if this works:
 - **Client approval page:** client confirms the brief with one click — both sides signed off, disputes resolved before they start.
 - **Scope-creep alerts** across the whole project history, not just one call.
 - **Teams:** agencies sharing client history across developers.
-
-**What I would need from WhipScribe to go further:**
-- Webhooks when a transcript is ready (no polling)
-- Richer speaker data — names where possible, not just Speaker 1 / Speaker 2
-- Cross-library search so `get_client_history` can query all past calls for a client in one request
