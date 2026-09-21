@@ -2,7 +2,7 @@
 Agentic Orchestrator for WhipScribe Call Processing.
 
 Main entrypoint coordinating RouterAgent intent detection, Playbook execution,
-Guardrail safety verification, and Proposal generation.
+ToolRegistry execution, Guardrail safety verification, and Proposal generation.
 """
 
 import logging
@@ -12,7 +12,7 @@ from pydantic import BaseModel, Field
 from .vertex_client import VertexClientFactory
 from .router import RouterAgent, RouterResult, CallIntent
 from .playbooks import PlaybookProcessor
-from .tools import AgentProposal, format_transcript_tool
+from .tools import ToolRegistry, AgentProposal
 from .guardrails import GuardrailValidator
 
 logger = logging.getLogger(__name__)
@@ -36,22 +36,40 @@ class AgentOrchestrator:
         self.factory = vertex_factory or VertexClientFactory(model_name=model_name)
         self.router = RouterAgent(client_factory=self.factory)
         self.playbooks = PlaybookProcessor(client_factory=self.factory)
+        self.tool_registry = ToolRegistry()
         self.validator = GuardrailValidator()
 
     def process_call(
         self,
         transcript_data: List[Dict[str, Any]],
+        client_id: Optional[str] = None,
         override_intent: Optional[CallIntent] = None,
         hourly_rate: float = 100.0,
         currency: str = "USD",
         previous_brief_summary: Optional[str] = None,
         confidence_threshold: float = 0.70,
     ) -> OrchestrationResult:
-        """Processes a call transcript through intent classification, playbook execution, and guardrails."""
+        """Processes a call transcript through intent classification, tool invocation, playbook execution, and guardrails."""
         logs = []
-        transcript_text = format_transcript_tool(transcript_data)
 
-        # 1. Intent Detection / Classification
+        # 1. Execute Tool: get_transcript
+        tx_tool_result = self.tool_registry.execute_tool("get_transcript", transcript_data=transcript_data)
+        if tx_tool_result.success and isinstance(tx_tool_result.data, dict):
+            transcript_text = tx_tool_result.data.get("formatted_text", "")
+            logs.append(f"Tool 'get_transcript' executed: formatted {tx_tool_result.data.get('line_count')} lines.")
+        else:
+            transcript_text = "\n".join([f"[{line.get('time', '00:00')}] {line.get('speaker', 'SPEAKER')}: {line.get('text', '')}" for line in transcript_data])
+            logs.append("Tool 'get_transcript' fallback executed.")
+
+        # 2. Execute Tool: get_client_history (if client_id provided)
+        history_summary = previous_brief_summary
+        if client_id:
+            history_result = self.tool_registry.execute_tool("get_client_history", client_id=client_id)
+            if history_result.success and isinstance(history_result.data, dict):
+                history_summary = history_result.data.get("history_summary")
+                logs.append(f"Tool 'get_client_history' executed for client '{client_id}'.")
+
+        # 3. Intent Detection / Classification via RouterAgent
         if override_intent:
             logger.info(f"Orchestrator: Using user-overridden intent '{override_intent.value}'")
             router_result = RouterResult(
@@ -64,10 +82,10 @@ class AgentOrchestrator:
             logs.append(f"Intent overridden by user to: {override_intent.value}")
         else:
             logger.info("Orchestrator: Running RouterAgent for intent classification")
-            router_result = self.router.classify(transcript_text, client_history_summary=previous_brief_summary)
+            router_result = self.router.classify(transcript_text, client_history_summary=history_summary)
             logs.append(f"Router classified intent as '{router_result.intent.value}' with confidence {router_result.confidence:.2f}")
 
-        # 2. Check Confidence Guardrail
+        # 4. Check Confidence Guardrail
         if router_result.needs_human_confirmation and not override_intent and router_result.confidence < confidence_threshold:
             logger.warning("Orchestrator: Intent confidence below threshold. Halting for user confirmation.")
             logs.append("Execution paused: low intent confidence requires user confirmation.")
@@ -78,7 +96,7 @@ class AgentOrchestrator:
                 logs=logs,
             )
 
-        # 3. Execute Selected Playbook
+        # 5. Execute Selected Playbook with registered tools
         selected_intent = router_result.intent
         logs.append(f"Running Playbook for intent '{selected_intent.value}'...")
 
@@ -91,7 +109,7 @@ class AgentOrchestrator:
         elif selected_intent == CallIntent.CHANGE_REQUEST:
             proposal = self.playbooks.run_change_request(
                 transcript_text,
-                previous_brief_summary=previous_brief_summary,
+                previous_brief_summary=history_summary,
                 hourly_rate=hourly_rate,
                 currency=currency,
             )
@@ -99,7 +117,7 @@ class AgentOrchestrator:
         else:
             proposal = self.playbooks.run_other(transcript_text)
 
-        # 4. Enforce Guardrail Sanitization
+        # 6. Enforce Guardrail Sanitization
         sanitized_proposal = self.validator.sanitize_proposal(proposal, transcript_text)
         logs.append("Guardrail verification completed: all extracted items verified with timestamps.")
 
