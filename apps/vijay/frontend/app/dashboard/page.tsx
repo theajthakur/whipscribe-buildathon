@@ -60,22 +60,13 @@ function DashboardContent() {
   const [isHistoryOpen, setIsHistoryOpen] = useState(true)
 
   const toggleUploader = () => {
-    setIsUploaderOpen((prev) => {
-      const next = !prev
-      if (next) setIsHistoryOpen(false)
-      else setIsHistoryOpen(true)
-      return next
-    })
+    setIsUploaderOpen((prev) => !prev)
   }
 
   const toggleHistory = () => {
-    setIsHistoryOpen((prev) => {
-      const next = !prev
-      if (next) setIsUploaderOpen(false)
-      else setIsUploaderOpen(true)
-      return next
-    })
+    setIsHistoryOpen((prev) => !prev)
   }
+
 
 
 
