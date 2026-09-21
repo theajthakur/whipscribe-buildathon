@@ -23,9 +23,38 @@ export function UploadMock({ onComplete, onUploadSuccess }: UploadMockProps) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [submissionId, setSubmissionId] = useState<string | null>(null)
 
+  const [isDragging, setIsDragging] = useState(false)
+
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setSelectedFile(e.target.files[0])
+      setErrorMessage(null)
+    }
+  }
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (statusStep === "idle") {
+      setIsDragging(true)
+    }
+  }
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
+  }
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
+
+    if (statusStep !== "idle") return
+
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      setSelectedFile(e.dataTransfer.files[0])
       setErrorMessage(null)
     }
   }
@@ -160,8 +189,13 @@ export function UploadMock({ onComplete, onUploadSuccess }: UploadMockProps) {
 
         <div
           onClick={() => statusStep === "idle" && fileInputRef.current?.click()}
-          className={`rounded-xl border-2 border-dashed p-8 flex flex-col items-center gap-3 text-center transition-colors ${
-            statusStep === "idle"
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          className={`rounded-xl border-2 border-dashed p-8 flex flex-col items-center gap-3 text-center transition-all ${
+            isDragging
+              ? "border-primary bg-primary/10 scale-[1.01] shadow-md ring-2 ring-primary/20 cursor-copy"
+              : statusStep === "idle"
               ? "border-border bg-muted/20 hover:border-primary/50 cursor-pointer"
               : "border-primary/30 bg-primary/5 cursor-default"
           }`}
@@ -172,7 +206,7 @@ export function UploadMock({ onComplete, onUploadSuccess }: UploadMockProps) {
             ) : statusStep === "completed" ? (
               <CheckCircle2 size={24} className="text-success" />
             ) : (
-              <UploadCloud size={24} className="text-primary" />
+              <UploadCloud size={24} className={`text-primary ${isDragging ? "scale-110 text-primary animate-bounce" : ""}`} />
             )}
           </div>
 

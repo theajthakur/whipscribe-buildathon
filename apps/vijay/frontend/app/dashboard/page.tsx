@@ -268,8 +268,8 @@ export default function DashboardPage() {
             {/* Right Column: Active Brief View or Empty State */}
             <div className="lg:col-span-7 space-y-6">
               {activeCallData ? (
-                <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
-                  <div className="flex items-center justify-between mb-4 pb-3 border-b border-border">
+                <div className="rounded-xl border border-border bg-card p-6 shadow-sm max-h-[620px] flex flex-col overflow-hidden">
+                  <div className="flex items-center justify-between mb-4 pb-3 border-b border-border shrink-0">
                     <div className="flex items-center gap-2">
                       <FileText className="w-4 h-4 text-primary" />
                       <h2 className="font-display font-semibold text-base text-foreground">
@@ -281,33 +281,35 @@ export default function DashboardPage() {
                     </Badge>
                   </div>
 
-                  {activeCallData?.router_result && (
-                    <div className="mb-4 p-3 rounded-lg bg-primary/10 border border-primary/20 text-xs flex items-center justify-between">
-                      <div>
-                        <span className="font-bold text-foreground">Detected Intent: </span>
-                        <span className="font-mono text-primary font-semibold uppercase">
-                          {activeCallData.router_result.intent}
+                  <div className="overflow-y-auto space-y-4 pr-1.5 flex-1">
+                    {activeCallData?.router_result && (
+                      <div className="p-3 rounded-lg bg-primary/10 border border-primary/20 text-xs flex items-center justify-between">
+                        <div>
+                          <span className="font-bold text-foreground">Detected Intent: </span>
+                          <span className="font-mono text-primary font-semibold uppercase">
+                            {activeCallData.router_result.intent}
+                          </span>
+                        </div>
+                        <span className="text-muted-foreground">
+                          Confidence: {(activeCallData.router_result.confidence * 100).toFixed(0)}%
                         </span>
                       </div>
-                      <span className="text-muted-foreground">
-                        Confidence: {(activeCallData.router_result.confidence * 100).toFixed(0)}%
-                      </span>
-                    </div>
-                  )}
+                    )}
 
-                  <BriefPanel items={itemsToDisplay} />
+                    <BriefPanel items={itemsToDisplay} />
 
-                  {activeCallData?.proposal?.client_message_draft && (
-                    <div className="mt-6 pt-4 border-t border-border">
-                      <div className="flex items-center gap-2 text-xs font-mono font-semibold text-foreground mb-2">
-                        <MessageSquare className="w-3.5 h-3.5 text-primary" />
-                        DRAFTED CLIENT CONFIRMATION MESSAGE
+                    {activeCallData?.proposal?.client_message_draft && (
+                      <div className="mt-4 pt-4 border-t border-border">
+                        <div className="flex items-center gap-2 text-xs font-mono font-semibold text-foreground mb-2">
+                          <MessageSquare className="w-3.5 h-3.5 text-primary" />
+                          DRAFTED CLIENT CONFIRMATION MESSAGE
+                        </div>
+                        <div className="p-3 rounded-lg bg-muted/40 border border-border text-xs text-foreground/90 font-sans whitespace-pre-line">
+                          {activeCallData.proposal.client_message_draft}
+                        </div>
                       </div>
-                      <div className="p-3 rounded-lg bg-muted/40 border border-border text-xs text-foreground/90 font-sans whitespace-pre-line">
-                        {activeCallData.proposal.client_message_draft}
-                      </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               ) : (
                 /* Empty State when no active call is selected */
