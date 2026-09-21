@@ -178,7 +178,7 @@ export default function DashboardPage() {
       </header>
 
       {/* Content */}
-      <main className="flex-1 py-10">
+      <main className="flex-1 py-10 pb-24">
         <Container>
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-8">
             <div>
@@ -312,14 +312,6 @@ export default function DashboardPage() {
                   </div>
 
                   <div className="overflow-y-auto space-y-4 pr-1.5 flex-1">
-                    {/* Audio Playback Player */}
-                    <AudioPlayer
-                      audioUrl={audioData?.audioUrl || null}
-                      audioRef={audioRef}
-                      sourceLabel={audioData?.source === "whipscribe" ? "WhipScribe API Stream" : "Local Audio"}
-                      filename={selectedFilename}
-                    />
-
                     {activeCallData?.router_result && (
                       <div className="p-3 rounded-lg bg-primary/10 border border-primary/20 text-xs flex items-center justify-between">
                         <div>
@@ -371,6 +363,14 @@ export default function DashboardPage() {
           </div>
         </Container>
       </main>
+
+      {/* Modern Responsive Fixed Bottom Audio Player Bar */}
+      <AudioPlayer
+        audioUrl={audioData?.audioUrl || null}
+        audioRef={audioRef}
+        sourceLabel={audioData?.source === "whipscribe" ? "WhipScribe API Stream" : "Local Audio"}
+        filename={selectedFilename || "Recording Audio"}
+      />
     </div>
   )
 }

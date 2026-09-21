@@ -1,13 +1,24 @@
 "use client"
 
 import React, { useState, useEffect } from "react"
-import { Play, Pause, Volume2, VolumeX, Music, ShieldCheck } from "lucide-react"
+import {
+  Play,
+  Pause,
+  Volume2,
+  VolumeX,
+  Music,
+  ShieldCheck,
+  RotateCcw,
+  RotateCw,
+  X,
+} from "lucide-react"
 
 interface AudioPlayerProps {
   audioUrl: string | null
   audioRef: React.RefObject<HTMLAudioElement | null>
   sourceLabel?: string
   filename?: string
+  onClose?: () => void
 }
 
 export function parseTimestampToSeconds(timeStr: string): number {
@@ -29,11 +40,25 @@ export function formatSecondsToTime(seconds: number): string {
   return `${m < 10 ? "0" : ""}${m}:${s < 10 ? "0" : ""}${s}`
 }
 
-export function AudioPlayer({ audioUrl, audioRef, sourceLabel = "WhipScribe Stream", filename }: AudioPlayerProps) {
+export function AudioPlayer({
+  audioUrl,
+  audioRef,
+  sourceLabel = "WhipScribe Stream",
+  filename = "Call Recording",
+  onClose,
+}: AudioPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
   const [isMuted, setIsMuted] = useState(false)
+  const [volume, setVolume] = useState(1.0)
+  const [isVisible, setIsVisible] = useState(true)
+
+  useEffect(() => {
+    if (audioUrl) {
+      setIsVisible(true)
+    }
+  }, [audioUrl])
 
   useEffect(() => {
     const audio = audioRef.current
@@ -79,6 +104,14 @@ export function AudioPlayer({ audioUrl, audioRef, sourceLabel = "WhipScribe Stre
     setCurrentTime(targetTime)
   }
 
+  const skipTime = (seconds: number) => {
+    const audio = audioRef.current
+    if (!audio) return
+    const newTime = Math.max(0, Math.min(duration, audio.currentTime + seconds))
+    audio.currentTime = newTime
+    setCurrentTime(newTime)
+  }
+
   const toggleMute = () => {
     const audio = audioRef.current
     if (!audio) return
@@ -86,64 +119,129 @@ export function AudioPlayer({ audioUrl, audioRef, sourceLabel = "WhipScribe Stre
     setIsMuted(!isMuted)
   }
 
-  if (!audioUrl) {
-    return (
-      <div className="p-3 rounded-lg bg-muted/20 border border-border text-xs text-muted-foreground font-mono flex items-center gap-2">
-        <Music className="w-3.5 h-3.5 text-muted-foreground" />
-        <span>No audio stream available for playback</span>
-      </div>
-    )
+  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = Number(e.target.value)
+    setVolume(val)
+    const audio = audioRef.current
+    if (audio) {
+      audio.volume = val
+      if (val === 0) {
+        audio.muted = true
+        setIsMuted(true)
+      } else {
+        audio.muted = false
+        setIsMuted(false)
+      }
+    }
+  }
+
+  if (!audioUrl || !isVisible) {
+    return <audio ref={audioRef} src={audioUrl || undefined} preload="metadata" />
   }
 
   return (
-    <div className="p-3 rounded-xl bg-card border border-primary/20 shadow-sm space-y-2 font-mono">
+    <>
       <audio ref={audioRef} src={audioUrl} preload="metadata" />
 
-      <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-        <div className="flex items-center gap-1.5 truncate max-w-[220px]">
-          <Music className="w-3.5 h-3.5 text-primary shrink-0" />
-          <span className="font-medium text-foreground truncate">{filename || "Recording Audio"}</span>
-        </div>
-        <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-primary font-semibold flex items-center gap-1">
-          <ShieldCheck className="w-3 h-3" /> {sourceLabel}
-        </span>
-      </div>
+      {/* Responsive Fixed Bottom Modern Audio Player Bar */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-md border-t border-border shadow-[0_-8px_30px_rgb(0,0,0,0.15)] transition-all duration-300 font-sans">
+        <div className="max-w-7xl mx-auto px-4 py-3 flex flex-col md:flex-row items-center justify-between gap-3 md:gap-6">
+          {/* Left: Audio Info */}
+          <div className="flex items-center gap-3 w-full md:w-1/4 shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
+              <Music className="w-5 h-5 text-primary" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-semibold text-foreground truncate">{filename}</p>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className="text-[10px] font-mono px-2 py-0.2 rounded-full bg-primary/10 border border-primary/20 text-primary font-semibold flex items-center gap-1">
+                  <ShieldCheck className="w-2.5 h-2.5" /> {sourceLabel}
+                </span>
+              </div>
+            </div>
+          </div>
 
-      <div className="flex items-center gap-3">
-        {/* Play / Pause Toggle Button */}
-        <button
-          onClick={togglePlay}
-          className="w-8 h-8 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 flex items-center justify-center transition-colors shadow-sm shrink-0"
-          title={isPlaying ? "Pause" : "Play"}
-        >
-          {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
-        </button>
+          {/* Center: Playback Controls & Timeline Slider */}
+          <div className="flex flex-col items-center gap-1.5 w-full md:w-2/4">
+            <div className="flex items-center gap-4">
+              {/* Skip -10s */}
+              <button
+                onClick={() => skipTime(-10)}
+                className="p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                title="Rewind 10 seconds"
+              >
+                <RotateCcw className="w-4 h-4" />
+              </button>
 
-        {/* Time Slider */}
-        <div className="flex-1 space-y-1">
-          <input
-            type="range"
-            min={0}
-            max={duration || 100}
-            value={currentTime}
-            onChange={handleSeek}
-            className="w-full h-1.5 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
-          />
-          <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-            <span>{formatSecondsToTime(currentTime)}</span>
-            <span>{formatSecondsToTime(duration)}</span>
+              {/* Play / Pause Toggle Button */}
+              <button
+                onClick={togglePlay}
+                className="w-10 h-10 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 flex items-center justify-center transition-all shadow-md shadow-primary/25 hover:scale-105 active:scale-95"
+                title={isPlaying ? "Pause" : "Play"}
+              >
+                {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 ml-0.5" />}
+              </button>
+
+              {/* Skip +10s */}
+              <button
+                onClick={() => skipTime(10)}
+                className="p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                title="Forward 10 seconds"
+              >
+                <RotateCw className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Timeline Slider with Time Display */}
+            <div className="flex items-center gap-3 w-full font-mono text-[11px] text-muted-foreground">
+              <span className="w-10 text-right shrink-0">{formatSecondsToTime(currentTime)}</span>
+              <input
+                type="range"
+                min={0}
+                max={duration || 100}
+                value={currentTime}
+                onChange={handleSeek}
+                className="w-full h-1.5 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
+              />
+              <span className="w-10 shrink-0">{formatSecondsToTime(duration)}</span>
+            </div>
+          </div>
+
+          {/* Right: Volume & Minimize Controls */}
+          <div className="flex items-center justify-end gap-3 w-full md:w-1/4 shrink-0">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={toggleMute}
+                className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                title={isMuted ? "Unmute" : "Mute"}
+              >
+                {isMuted ? <VolumeX className="w-4 h-4 text-destructive" /> : <Volume2 className="w-4 h-4" />}
+              </button>
+              <input
+                type="range"
+                min={0}
+                max={1}
+                step={0.05}
+                value={isMuted ? 0 : volume}
+                onChange={handleVolumeChange}
+                className="w-20 h-1.5 bg-muted rounded-lg appearance-none cursor-pointer accent-primary hidden sm:block"
+              />
+            </div>
+
+            {/* Close / Minimize Button */}
+            <button
+              onClick={() => {
+                setIsVisible(false)
+                if (onClose) onClose()
+              }}
+              className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              title="Hide audio player bar"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
         </div>
-
-        {/* Mute Button */}
-        <button
-          onClick={toggleMute}
-          className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0"
-          title={isMuted ? "Unmute" : "Mute"}
-        >
-          {isMuted ? <VolumeX className="w-4 h-4 text-destructive" /> : <Volume2 className="w-4 h-4" />}
-        </button>
       </div>
-    </div>
+    </>
   )
 }
