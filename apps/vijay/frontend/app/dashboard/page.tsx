@@ -228,9 +228,10 @@ function DashboardContent() {
   }
 
   return (
-    <div className="min-h-screen lg:h-screen w-full bg-background text-foreground flex flex-col overflow-x-hidden lg:overflow-hidden font-sans">
-      {/* Sleek Glassmorphism Header */}
+    <div className="h-screen w-screen max-w-full bg-background text-foreground flex flex-col overflow-hidden font-sans">
+      {/* Sleek Glassmorphism Header (Navbar) */}
       <header className="h-14 border-b border-border bg-card/80 backdrop-blur-md px-4 lg:px-6 flex items-center justify-between shrink-0 z-30">
+
         <div className="flex items-center gap-3">
           <Link
             href="/"
@@ -266,7 +267,8 @@ function DashboardContent() {
       {/* Main Workspace - Adaptive Viewport Container */}
       <main className="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
         {/* Left Column / Sidebar: New Upload & Recording History */}
-        <div className="w-full lg:w-[420px] xl:w-[460px] shrink-0 border-r border-border bg-card/30 flex flex-col h-auto lg:h-full overflow-hidden">
+        <div className="w-full lg:w-[420px] xl:w-[460px] shrink-0 border-b lg:border-b-0 lg:border-r border-border bg-card/30 flex flex-col h-1/2 lg:h-full overflow-hidden min-h-0">
+
           
           {/* Scrollable Container for Upload & Submissions List */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -420,7 +422,8 @@ function DashboardContent() {
         </div>
 
         {/* Right Panel: Main Call Brief Proposal Workspace */}
-        <div className="flex-1 flex flex-col h-auto lg:h-full overflow-hidden bg-background">
+        <div className="flex-1 flex flex-col h-1/2 lg:h-full overflow-hidden min-h-0 bg-background">
+
           {activeCallData ? (
             <div className="flex-1 flex flex-col h-full overflow-hidden">
               {/* Proposal Header Bar */}
