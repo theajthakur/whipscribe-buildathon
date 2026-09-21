@@ -19,6 +19,7 @@ interface AudioPlayerProps {
   sourceLabel?: string
   filename?: string
   onClose?: () => void
+  onTimeUpdate?: (currentTime: number) => void
 }
 
 export function parseTimestampToSeconds(timeStr: string): number {
@@ -46,6 +47,7 @@ export function AudioPlayer({
   sourceLabel = "WhipScribe Stream",
   filename = "Call Recording",
   onClose,
+  onTimeUpdate,
 }: AudioPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
@@ -64,7 +66,13 @@ export function AudioPlayer({
     const audio = audioRef.current
     if (!audio) return
 
-    const handleTimeUpdate = () => setCurrentTime(audio.currentTime)
+    const handleTimeUpdate = () => {
+      const cur = audio.currentTime
+      setCurrentTime(cur)
+      if (onTimeUpdate) {
+        onTimeUpdate(cur)
+      }
+    }
     const handleLoadedMetadata = () => setDuration(audio.duration || 0)
     const handlePlay = () => setIsPlaying(true)
     const handlePause = () => setIsPlaying(false)

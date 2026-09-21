@@ -151,6 +151,47 @@ export default function DashboardPage() {
       ]
     : []
 
+  const handleAudioTimeUpdate = useCallback(
+    (currentTime: number) => {
+      if (!itemsToDisplay || itemsToDisplay.length === 0) return
+
+      // Sort items by their timestamp in seconds
+      const itemsWithSeconds = itemsToDisplay
+        .map((item: any) => ({
+          id: item.id,
+          seconds: parseTimestampToSeconds(item.time),
+        }))
+        .filter((it: any) => !isNaN(it.seconds))
+        .sort((a: any, b: any) => a.seconds - b.seconds)
+
+      if (itemsWithSeconds.length === 0) return
+
+      let matchedId: string | null = null
+
+      for (let i = 0; i < itemsWithSeconds.length; i++) {
+        const curItem = itemsWithSeconds[i]
+        const nextItem = itemsWithSeconds[i + 1]
+
+        const start = curItem.seconds
+        const end = nextItem ? nextItem.seconds : Infinity
+
+        if (currentTime >= start && currentTime < end) {
+          matchedId = curItem.id
+          break
+        }
+      }
+
+      if (matchedId && matchedId !== activeItemId) {
+        setActiveItemId(matchedId)
+        const el = document.querySelector(`[data-brief-item="${matchedId}"]`)
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "nearest" })
+        }
+      }
+    },
+    [itemsToDisplay, activeItemId]
+  )
+
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
       {/* Header */}
@@ -370,6 +411,7 @@ export default function DashboardPage() {
         audioRef={audioRef}
         sourceLabel={audioData?.source === "whipscribe" ? "WhipScribe API Stream" : "Local Audio"}
         filename={selectedFilename || "Recording Audio"}
+        onTimeUpdate={handleAudioTimeUpdate}
       />
     </div>
   )
