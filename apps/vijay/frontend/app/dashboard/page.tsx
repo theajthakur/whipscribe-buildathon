@@ -255,7 +255,8 @@ function DashboardContent() {
         <div className="w-full lg:w-[420px] xl:w-[460px] shrink-0 border-r border-border bg-card/30 flex flex-col h-auto lg:h-full overflow-hidden">
           
           {/* Scrollable Container for Upload & Submissions List */}
-          <div className={`flex-1 overflow-y-auto p-4 space-y-4 ${hasActiveAudio ? "pb-28 lg:pb-24" : "pb-6"}`}>
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+
 
             
             {/* 1. New Recording Box */}
@@ -378,7 +379,8 @@ function DashboardContent() {
               </div>
 
               {/* Scrollable Brief Body */}
-              <div className="flex-1 overflow-y-auto p-6 space-y-6 pb-28">
+              <div className="flex-1 overflow-y-auto p-6 space-y-6">
+
                 {activeCallData?.router_result && (
                   <div className="p-4 rounded-xl bg-primary/10 border border-primary/20 text-xs flex items-center justify-between shadow-sm">
                     <div className="flex items-center gap-2">
@@ -452,14 +454,18 @@ function DashboardContent() {
         </div>
       </main>
 
-      {/* Modern Responsive Fixed Bottom Audio Player */}
-      <AudioPlayer
-        audioUrl={audioData?.audioUrl || null}
-        audioRef={audioRef}
-        sourceLabel="WhipScribe API Stream"
-        filename={selectedFilename || "Recording Audio"}
-        onTimeUpdate={handleAudioTimeUpdate}
-      />
+      {/* Modern Responsive Audio Player Flex Bar */}
+      {hasActiveAudio && (
+        <AudioPlayer
+          audioUrl={audioData?.audioUrl || null}
+          audioRef={audioRef}
+          sourceLabel="WhipScribe API Stream"
+          filename={selectedFilename || "Recording Audio"}
+          onTimeUpdate={handleAudioTimeUpdate}
+          onClose={() => setIsAudioClosed(true)}
+        />
+      )}
+
     </div>
   )
 }

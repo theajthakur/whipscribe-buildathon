@@ -150,8 +150,9 @@ export function AudioPlayer({
     <>
       <audio ref={audioRef} src={audioUrl} preload="metadata" />
 
-      {/* Fixed Bottom Audio Player Container */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-md border-t border-border shadow-[0_-8px_30px_rgb(0,0,0,0.15)] transition-all duration-300 font-sans">
+      {/* Modern Audio Player Flex Bar */}
+      <div className="w-full shrink-0 z-30 bg-card/95 backdrop-blur-md border-t border-border shadow-[0_-8px_30px_rgb(0,0,0,0.15)] transition-all duration-300 font-sans">
+
         
         {/* MOBILE LAYOUT (md:hidden) */}
         <div className="flex md:hidden flex-col px-4 py-2.5">
