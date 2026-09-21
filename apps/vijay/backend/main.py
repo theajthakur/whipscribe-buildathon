@@ -299,6 +299,51 @@ def check_transcription_status(
     }
 
 
+@app.get("/api/submissions/{submission_id}/audio")
+def get_submission_audio(
+    submission_id: str,
+    user_id: str = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+):
+    """Fetches playback audio URL from WhipScribe API or local upload fallback."""
+    sub = (
+        db.query(models.UserSubmission)
+        .filter(models.UserSubmission.id == submission_id, models.UserSubmission.user_id == user_id)
+        .first()
+    )
+
+    if not sub:
+        raise HTTPException(status_code=404, detail="Submission not found or unauthorized")
+
+    job_id = sub.transcript_job_id
+    backend_base = os.getenv("BACKEND_PUBLIC_URL", "http://localhost:8000")
+    local_audio_url = f"{backend_base}{sub.source_location}" if sub.source_location else None
+
+    # Query WhipScribe API playback URL if real job ID
+    if job_id and not job_id.startswith("job_sim_"):
+        try:
+            whip_client = WhipScribeClient()
+            audio_obj = whip_client.jobs.get_audio_url(job_id)
+            if audio_obj and hasattr(audio_obj, "url") and audio_obj.url:
+                return {
+                    "submission_id": sub.id,
+                    "audio_url": audio_obj.url,
+                    "source": getattr(audio_obj, "storage", "whipscribe"),
+                    "expires_in": getattr(audio_obj, "expires_in", 3600),
+                    "local_fallback": local_audio_url,
+                }
+        except Exception as e:
+            logger.warning(f"WhipScribe audio URL fetch note: {e}")
+
+    return {
+        "submission_id": sub.id,
+        "audio_url": local_audio_url,
+        "source": "local",
+        "expires_in": None,
+        "local_fallback": local_audio_url,
+    }
+
+
 # --- Agentic Orchestration API ---
 
 @app.post("/api/submissions/{submission_id}/process-agent")

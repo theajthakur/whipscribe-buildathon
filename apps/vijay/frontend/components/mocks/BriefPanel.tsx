@@ -13,7 +13,7 @@ const typeLabel: Record<BriefItem["type"], string> = {
 interface BriefPanelProps {
   items: BriefItem[]
   activeItemId?: string | null
-  onChipClick?: (transcriptRef: string) => void
+  onChipClick?: (time: string, itemId: string) => void
 }
 
 export function BriefPanel({
@@ -39,19 +39,19 @@ export function BriefPanel({
             className={cn(
               "rounded-lg border border-border p-3 transition-all duration-200",
               activeItemId === item.id &&
-                "border-accent bg-accent/10",
+                "border-primary bg-primary/10 shadow-sm ring-1 ring-primary/20",
             )}
           >
             <div className="flex items-center justify-between gap-2 mb-1.5">
-              <span className="text-xs text-muted-foreground">
-                {typeLabel[item.type]}
+              <span className="text-xs font-medium text-muted-foreground">
+                {typeLabel[item.type] || item.type}
               </span>
               <TimestampChip
                 time={item.time}
                 active={activeItemId === item.id}
                 onClick={
                   onChipClick
-                    ? () => onChipClick(item.transcriptRef)
+                    ? () => onChipClick(item.time, item.id)
                     : undefined
                 }
               />

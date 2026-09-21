@@ -160,6 +160,17 @@ export const api = {
     return res.data
   },
 
+  async getSubmissionAudio(submissionId: string) {
+    const res = await apiClient.get<{
+      submission_id: string
+      audio_url: string | null
+      source: string
+      expires_in: number | null
+      local_fallback: string | null
+    }>(`/api/submissions/${submissionId}/audio`)
+    return res.data
+  },
+
   async getUserSettings() {
     const res = await apiClient.get("/api/settings")
     return res.data

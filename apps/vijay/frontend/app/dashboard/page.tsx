@@ -1,12 +1,13 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { UserButton, useAuth } from "@clerk/nextjs"
 import { Container } from "@/components/ui/Container"
 import { Heading } from "@/components/ui/Heading"
 import { Badge } from "@/components/ui/Badge"
 import { UploadMock } from "@/components/mocks/UploadMock"
 import { BriefPanel } from "@/components/mocks/BriefPanel"
+import { AudioPlayer, parseTimestampToSeconds } from "@/components/mocks/AudioPlayer"
 import { mockBriefItems } from "@/data/mockContent"
 import { api } from "@/lib/api"
 import Link from "next/link"
@@ -38,7 +39,11 @@ export interface SubmissionItem {
 
 export default function DashboardPage() {
   const { userId } = useAuth()
+  const audioRef = useRef<HTMLAudioElement>(null)
   const [activeCallData, setActiveCallData] = useState<any>(null)
+  const [audioData, setAudioData] = useState<{ audioUrl: string | null; source: string } | null>(null)
+  const [activeItemId, setActiveItemId] = useState<string | null>(null)
+  const [selectedFilename, setSelectedFilename] = useState<string>("")
   const [submissions, setSubmissions] = useState<SubmissionItem[]>([])
   const [loadingHistory, setLoadingHistory] = useState(true)
   const [selectedSubId, setSelectedSubId] = useState<string | null>(null)
@@ -60,7 +65,20 @@ export default function DashboardPage() {
     fetchSubmissions()
   }, [fetchSubmissions])
 
-  const handleUploadComplete = (agentResponse: any) => {
+  const loadAudioForSubmission = async (subId: string) => {
+    try {
+      api.setUserId(userId || null)
+      const audioRes = await api.getSubmissionAudio(subId)
+      setAudioData({
+        audioUrl: audioRes.audio_url || audioRes.local_fallback,
+        source: audioRes.source,
+      })
+    } catch (err) {
+      console.error("Failed to load submission audio URL", err)
+    }
+  }
+
+  const handleUploadComplete = async (agentResponse: any) => {
     if (agentResponse && agentResponse.proposal) {
       setActiveCallData(agentResponse)
     }
@@ -69,6 +87,9 @@ export default function DashboardPage() {
 
   const handleSelectSubmission = async (sub: SubmissionItem) => {
     setSelectedSubId(sub.id)
+    setSelectedFilename(sub.filename)
+    loadAudioForSubmission(sub.id)
+
     if (sub.status === "completed") {
       try {
         setProcessingSubId(sub.id)
@@ -99,6 +120,15 @@ export default function DashboardPage() {
       } finally {
         setProcessingSubId(null)
       }
+    }
+  }
+
+  const handleChipClick = (timeStr: string, itemId: string) => {
+    setActiveItemId(itemId)
+    if (audioRef.current && timeStr) {
+      const targetSeconds = parseTimestampToSeconds(timeStr)
+      audioRef.current.currentTime = targetSeconds
+      audioRef.current.play().catch((err) => console.error("Audio playback note:", err))
     }
   }
 
@@ -282,6 +312,14 @@ export default function DashboardPage() {
                   </div>
 
                   <div className="overflow-y-auto space-y-4 pr-1.5 flex-1">
+                    {/* Audio Playback Player */}
+                    <AudioPlayer
+                      audioUrl={audioData?.audioUrl || null}
+                      audioRef={audioRef}
+                      sourceLabel={audioData?.source === "whipscribe" ? "WhipScribe API Stream" : "Local Audio"}
+                      filename={selectedFilename}
+                    />
+
                     {activeCallData?.router_result && (
                       <div className="p-3 rounded-lg bg-primary/10 border border-primary/20 text-xs flex items-center justify-between">
                         <div>
@@ -296,7 +334,11 @@ export default function DashboardPage() {
                       </div>
                     )}
 
-                    <BriefPanel items={itemsToDisplay} />
+                    <BriefPanel
+                      items={itemsToDisplay}
+                      activeItemId={activeItemId}
+                      onChipClick={handleChipClick}
+                    />
 
                     {activeCallData?.proposal?.client_message_draft && (
                       <div className="mt-4 pt-4 border-t border-border">
