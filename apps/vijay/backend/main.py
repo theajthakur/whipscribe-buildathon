@@ -347,13 +347,13 @@ def get_submission_audio(
 # --- Agentic Orchestration API ---
 
 @app.post("/api/submissions/{submission_id}/process-agent")
-def process_agent_call(
+async def process_agent_call(
     submission_id: str,
     payload: ProcessAgentRequestSchema,
     user_id: str = Depends(get_current_user_id),
     db: Session = Depends(get_db),
 ):
-    """Executes Vertex AI Agent Orchestrator on completed transcript and persists call proposal items in database."""
+    """Executes Vertex AI Agent Orchestrator asynchronously on completed transcript and persists call proposal items in database."""
     sub = (
         db.query(models.UserSubmission)
         .filter(models.UserSubmission.id == submission_id, models.UserSubmission.user_id == user_id)
@@ -399,8 +399,9 @@ def process_agent_call(
     orchestrator = AgentOrchestrator()
     override = CallIntent(payload.override_intent) if payload.override_intent else None
 
-    # Run Agentic Orchestration
-    result = orchestrator.process_call(
+    # Run Agentic Orchestration asynchronously in worker thread pool without blocking event loop
+    result = await asyncio.to_thread(
+        orchestrator.process_call,
         transcript_data=sub.transcript_json,
         client_id=payload.client_id,
         hourly_rate=settings.hourly_rate,
@@ -551,28 +552,54 @@ async def process_agent_call_stream(
             yield f"data: {json.dumps({'type': 'log', 'step': 'router_agent', 'message': f'User manual override intent selected: {override.value.upper()}', 'percent': 45})}\n\n"
         else:
             yield f"data: {json.dumps({'type': 'log', 'step': 'router_agent', 'message': 'Vertex AI RouterAgent: Analyzing transcript to classify intent & detect call type...', 'percent': 35})}\n\n"
-            router_result = orchestrator.router.classify(transcript_text)
+            router_result = await asyncio.to_thread(orchestrator.router.classify, transcript_text)
             yield f"data: {json.dumps({'type': 'log', 'step': 'intent_classified', 'message': f'RouterAgent Classified Intent: {router_result.intent.value.upper()} (Confidence: {router_result.confidence*100:.0f}%)', 'percent': 50})}\n\n"
 
         # Step 4: Playbook Engine Execution
         selected_intent = router_result.intent
+        user_record = db.query(models.User).filter(models.User.id == user_id).first()
+        user_name = f"{user_record.first_name or ''} {user_record.last_name or ''}".strip() if user_record else "Freelancer"
+        if not user_name:
+            user_name = "Freelancer"
+
         yield f"data: {json.dumps({'type': 'log', 'step': 'playbook_exec', 'message': f'Executing {selected_intent.value.title()}CallPlaybook with Vertex AI Gemini model...', 'percent': 65})}\n\n"
 
         if selected_intent == CallIntent.DISCOVERY:
-            proposal = orchestrator.playbooks.run_discovery(transcript_text, hourly_rate=settings.hourly_rate, currency=settings.currency)
+            proposal = await asyncio.to_thread(
+                orchestrator.playbooks.run_discovery,
+                transcript_text,
+                hourly_rate=settings.hourly_rate,
+                currency=settings.currency,
+                message_tone=settings.message_tone,
+                user_name=user_name,
+            )
         elif selected_intent == CallIntent.INQUIRY:
-            proposal = orchestrator.playbooks.run_inquiry(transcript_text, hourly_rate=settings.hourly_rate, currency=settings.currency)
+            proposal = await asyncio.to_thread(
+                orchestrator.playbooks.run_inquiry,
+                transcript_text,
+                hourly_rate=settings.hourly_rate,
+                currency=settings.currency,
+                message_tone=settings.message_tone,
+                user_name=user_name,
+            )
         elif selected_intent == CallIntent.CHANGE_REQUEST:
-            proposal = orchestrator.playbooks.run_change_request(transcript_text, hourly_rate=settings.hourly_rate, currency=settings.currency)
+            proposal = await asyncio.to_thread(
+                orchestrator.playbooks.run_change_request,
+                transcript_text,
+                hourly_rate=settings.hourly_rate,
+                currency=settings.currency,
+                message_tone=settings.message_tone,
+                user_name=user_name,
+            )
         else:
-            proposal = orchestrator.playbooks.run_other(transcript_text)
+            proposal = await asyncio.to_thread(orchestrator.playbooks.run_other, transcript_text)
 
         total_price = proposal.quote.total_price if proposal and proposal.quote else settings.hourly_rate * 10
         yield f"data: {json.dumps({'type': 'log', 'step': 'tool_quote', 'message': f'Tool calculate_quote: Extracted {len(proposal.requirements) if proposal else 0} requirements & {len(proposal.tasks) if proposal else 0} tasks. Total Quote: ${total_price:.2f} ({settings.currency})', 'percent': 80})}\n\n"
 
         # Step 5: Guardrail Verification
         yield f"data: {json.dumps({'type': 'log', 'step': 'guardrails', 'message': 'GuardrailValidator: Verifying scope boundaries & timestamp references...', 'percent': 90})}\n\n"
-        sanitized_proposal = orchestrator.validator.sanitize_proposal(proposal, transcript_text)
+        sanitized_proposal = await asyncio.to_thread(orchestrator.validator.sanitize_proposal, proposal, transcript_text)
 
         # Step 6: Persist in PostgreSQL
         call_record = crud.create_call_record(
