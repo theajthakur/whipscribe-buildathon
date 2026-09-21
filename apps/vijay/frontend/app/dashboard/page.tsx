@@ -312,7 +312,7 @@ function DashboardContent() {
 
           
           {/* Scrollable Container for Upload & Submissions List */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          <div className="flex-1 overflow-y-auto p-4 pb-24 space-y-4">
 
 
             
@@ -495,7 +495,7 @@ function DashboardContent() {
               </div>
 
               {/* Scrollable Brief Body */}
-              <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              <div className="flex-1 overflow-y-auto p-6 pb-24 space-y-6">
 
                 {activeCallData?.router_result && (
                   <div className="p-4 rounded-xl bg-primary/10 border border-primary/20 text-xs flex items-center justify-between shadow-sm">
