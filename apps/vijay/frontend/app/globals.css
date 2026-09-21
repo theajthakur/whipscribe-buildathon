@@ -1,26 +1,164 @@
 @import "tailwindcss";
 
+/* Dark mode is toggled by adding the "dark" class on <html> */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ------------------------------------------------------------------
+   1. Colour tokens (the ONLY place raw colour values may live)
+   Use in code as: bg-primary, text-foreground, border-border,
+   bg-accent, text-muted-foreground, bg-primary/10 (opacity is fine)
+------------------------------------------------------------------- */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Surfaces */
+  --background: #f4f6fa;
+  --foreground: #0e1626;
+  --card: #ffffff;
+  --card-foreground: #0e1626;
+
+  /* Brand: cobalt */
+  --primary: #2540d9;
+  --primary-foreground: #ffffff;
+  --secondary: #e4e9fb;
+  --secondary-foreground: #14206b;
+
+  /* Highlighter: used for timestamps and marked phrases in transcripts */
+  --accent: #ffce3a;
+  --accent-foreground: #1a1400;
+
+  /* Quiet UI */
+  --muted: #e9ecf2;
+  --muted-foreground: #566074;
+  --border: #d5dae5;
+  --input: #d5dae5;
+  --ring: #2540d9;
+
+  /* Status */
+  --success: #14805a;
+  --success-foreground: #ffffff;
+  --warning: #b45309;
+  --warning-foreground: #ffffff;
+  --destructive: #c8322e;
+  --destructive-foreground: #ffffff;
+
+  /* Shape */
+  --radius: 0.75rem;
 }
 
+.dark {
+  --background: #0b1020;
+  --foreground: #eef1fa;
+  --card: #121935;
+  --card-foreground: #eef1fa;
+
+  --primary: #7a90ff;
+  --primary-foreground: #0b1020;
+  --secondary: #1b2450;
+  --secondary-foreground: #d9e0ff;
+
+  --accent: #ffd95c;
+  --accent-foreground: #1a1400;
+
+  --muted: #171f3d;
+  --muted-foreground: #a3adc8;
+  --border: #263056;
+  --input: #263056;
+  --ring: #7a90ff;
+
+  --success: #3ec895;
+  --success-foreground: #04150e;
+  --warning: #f0a04b;
+  --warning-foreground: #1c0f00;
+  --destructive: #ff7a75;
+  --destructive-foreground: #1c0504;
+}
+
+/* ------------------------------------------------------------------
+   2. Expose tokens to Tailwind utilities
+------------------------------------------------------------------- */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+
+  /* Fonts: the CSS variables come from next/font in app/layout.tsx */
+  --font-display: var(--font-sora), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-figtree), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, SFMono-Regular, monospace;
+
+  /* Radius scale */
+  --radius-sm: calc(var(--radius) - 6px);
+  --radius-md: calc(var(--radius) - 3px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 6px);
+  --radius-2xl: calc(var(--radius) + 14px);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* ------------------------------------------------------------------
+   3. Base styles
+------------------------------------------------------------------- */
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background-color: var(--accent);
+    color: var(--accent-foreground);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
 }
