@@ -7,9 +7,10 @@ import { api } from "@/lib/api"
 
 interface UploadMockProps {
   onComplete?: (callData: any) => void
+  onUploadSuccess?: () => void
 }
 
-export function UploadMock({ onComplete }: UploadMockProps) {
+export function UploadMock({ onComplete, onUploadSuccess }: UploadMockProps) {
   const { userId } = useAuth()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -44,19 +45,51 @@ export function UploadMock({ onComplete }: UploadMockProps) {
       // Set user ID on API client
       api.setUserId(userId || null)
 
+      // Exponential progress animation towards 80% threshold
+      let currentSimulated = 0
+      const simTimer = setInterval(() => {
+        // Exponential decrease in speed approaching 80%
+        currentSimulated = currentSimulated + (80 - currentSimulated) * 0.08
+        setUploadProgress(Math.min(80, Math.round(currentSimulated)))
+      }, 100)
+
       // 1. Upload File
-      const res = await api.uploadAudio(selectedFile, (progress) => {
-        setUploadProgress(progress)
+      const res = await api.uploadAudio(selectedFile)
+
+      // Clear interval timer once backend upload returns
+      clearInterval(simTimer)
+
+      // Smoothly animate progress 80% -> 100%
+      const startP = Math.max(currentSimulated, 50)
+      const animDuration = 350
+      const intervalMs = 25
+      const steps = animDuration / intervalMs
+      let stepCount = 0
+
+      await new Promise<void>((resolve) => {
+        const finishTimer = setInterval(() => {
+          stepCount++
+          const progressVal = Math.min(100, Math.round(startP + ((100 - startP) * stepCount) / steps))
+          setUploadProgress(progressVal)
+          if (stepCount >= steps || progressVal >= 100) {
+            clearInterval(finishTimer)
+            resolve()
+          }
+        }, intervalMs)
       })
 
       setSubmissionId(res.submission_id)
+      if (onUploadSuccess) {
+        onUploadSuccess()
+      }
+
       setStatusStep("transcribing")
 
       // 2. Poll WhipScribe Transcription Status
       let isDone = false
       let attempts = 0
 
-      while (!isDone && attempts < 30) {
+      while (!isDone && attempts < 60) {
         attempts++
         await new Promise((resolve) => setTimeout(resolve, 2000))
         const statusRes = await api.checkStatus(res.submission_id)

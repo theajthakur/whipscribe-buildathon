@@ -88,6 +88,21 @@ export const api = {
     return res.data
   },
 
+  async getUserSubmissions() {
+    const res = await apiClient.get<Array<{
+      id: string
+      source_type: string
+      source_location: string
+      filename: string
+      status: "pending" | "transcribing" | "completed" | "failed"
+      transcript_job_id: string
+      created_at: string
+      has_transcript: boolean
+      calls: string[]
+    }>>("/api/submissions")
+    return res.data
+  },
+
   async getUserSettings() {
     const res = await apiClient.get("/api/settings")
     return res.data

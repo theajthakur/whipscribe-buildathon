@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { UserButton, useAuth } from "@clerk/nextjs"
 import { Container } from "@/components/ui/Container"
 import { Heading } from "@/components/ui/Heading"
@@ -8,16 +8,97 @@ import { Badge } from "@/components/ui/Badge"
 import { UploadMock } from "@/components/mocks/UploadMock"
 import { BriefPanel } from "@/components/mocks/BriefPanel"
 import { mockBriefItems } from "@/data/mockContent"
+import { api } from "@/lib/api"
 import Link from "next/link"
-import { Plus, Clock, FileText, ArrowLeft, Sparkles, MessageSquare } from "lucide-react"
+import {
+  Plus,
+  Clock,
+  FileText,
+  ArrowLeft,
+  MessageSquare,
+  History,
+  Loader2,
+  CheckCircle2,
+  AlertCircle,
+  RefreshCw,
+  FileAudio,
+} from "lucide-react"
+
+export interface SubmissionItem {
+  id: string
+  source_type: string
+  source_location: string
+  filename: string
+  status: "pending" | "transcribing" | "completed" | "failed"
+  transcript_job_id: string
+  created_at: string
+  has_transcript: boolean
+  calls: string[]
+}
 
 export default function DashboardPage() {
   const { userId } = useAuth()
   const [activeCallData, setActiveCallData] = useState<any>(null)
+  const [submissions, setSubmissions] = useState<SubmissionItem[]>([])
+  const [loadingHistory, setLoadingHistory] = useState(true)
+  const [selectedSubId, setSelectedSubId] = useState<string | null>(null)
+  const [processingSubId, setProcessingSubId] = useState<string | null>(null)
+
+  const fetchSubmissions = useCallback(async () => {
+    try {
+      api.setUserId(userId || null)
+      const data = await api.getUserSubmissions()
+      setSubmissions(data)
+    } catch (err) {
+      console.error("Failed to load submissions", err)
+    } finally {
+      setLoadingHistory(false)
+    }
+  }, [userId])
+
+  useEffect(() => {
+    fetchSubmissions()
+  }, [fetchSubmissions])
 
   const handleUploadComplete = (agentResponse: any) => {
     if (agentResponse && agentResponse.proposal) {
       setActiveCallData(agentResponse)
+    }
+    fetchSubmissions()
+  }
+
+  const handleSelectSubmission = async (sub: SubmissionItem) => {
+    setSelectedSubId(sub.id)
+    if (sub.status === "completed") {
+      try {
+        setProcessingSubId(sub.id)
+        api.setUserId(userId || null)
+        const agentRes = await api.processAgent(sub.id)
+        if (agentRes && agentRes.proposal) {
+          setActiveCallData(agentRes)
+        }
+      } catch (err) {
+        console.error("Failed to load call proposal", err)
+      } finally {
+        setProcessingSubId(null)
+      }
+    } else if (sub.status === "pending" || sub.status === "transcribing") {
+      try {
+        setProcessingSubId(sub.id)
+        api.setUserId(userId || null)
+        const statusRes = await api.checkStatus(sub.id)
+        fetchSubmissions()
+        if (statusRes.status === "completed") {
+          const agentRes = await api.processAgent(sub.id)
+          if (agentRes && agentRes.proposal) {
+            setActiveCallData(agentRes)
+          }
+        }
+      } catch (err) {
+        console.error("Failed to check status", err)
+      } finally {
+        setProcessingSubId(null)
+      }
     }
   }
 
@@ -81,17 +162,110 @@ export default function DashboardPage() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            {/* Upload Box */}
+            {/* Left Column: Upload Box + Submissions History */}
             <div className="lg:col-span-5 space-y-6">
+              {/* Upload Box */}
               <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
                 <h2 className="font-display font-semibold text-lg text-foreground mb-4 flex items-center gap-2">
                   <Plus className="w-4 h-4 text-primary" /> New Call Recording
                 </h2>
-                <UploadMock onComplete={handleUploadComplete} />
+                <UploadMock
+                  onComplete={handleUploadComplete}
+                  onUploadSuccess={fetchSubmissions}
+                />
+              </div>
+
+              {/* Submissions DB History List */}
+              <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
+                <div className="flex items-center justify-between mb-4 pb-3 border-b border-border">
+                  <h2 className="font-display font-semibold text-base text-foreground flex items-center gap-2">
+                    <History className="w-4 h-4 text-primary" /> Uploaded Files & WhipScribe Status
+                  </h2>
+                  <button
+                    onClick={fetchSubmissions}
+                    className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                    title="Refresh history"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                {loadingHistory ? (
+                  <div className="flex items-center justify-center py-6 text-xs text-muted-foreground">
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" /> Loading past recordings...
+                  </div>
+                ) : submissions.length === 0 ? (
+                  <p className="text-xs text-muted-foreground text-center py-4">
+                    No files uploaded yet. Upload a recording above to get started.
+                  </p>
+                ) : (
+                  <div className="space-y-2.5 max-h-[350px] overflow-y-auto pr-1">
+                    {submissions.map((sub) => {
+                      const isSelected = selectedSubId === sub.id
+                      const isProcessing = processingSubId === sub.id
+
+                      return (
+                        <div
+                          key={sub.id}
+                          onClick={() => handleSelectSubmission(sub)}
+                          className={`p-3 rounded-lg border text-xs cursor-pointer transition-colors ${
+                            isSelected
+                              ? "border-primary/50 bg-primary/10"
+                              : "border-border bg-muted/20 hover:border-border/80 hover:bg-muted/40"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="font-semibold text-foreground truncate max-w-[200px] flex items-center gap-1.5">
+                              <FileAudio className="w-3.5 h-3.5 text-primary shrink-0" />
+                              {sub.filename}
+                            </span>
+                            <span className="font-mono text-[10px] px-2 py-0.5 rounded-full border">
+                              {sub.status === "completed" && (
+                                <span className="text-emerald-500 font-medium flex items-center gap-1">
+                                  <CheckCircle2 className="w-3 h-3" /> Completed
+                                </span>
+                              )}
+                              {sub.status === "transcribing" && (
+                                <span className="text-amber-500 font-medium flex items-center gap-1">
+                                  <Loader2 className="w-3 h-3 animate-spin" /> Transcribing
+                                </span>
+                              )}
+                              {sub.status === "pending" && (
+                                <span className="text-amber-400 font-medium flex items-center gap-1">
+                                  <Clock className="w-3 h-3" /> Pending
+                                </span>
+                              )}
+                              {sub.status === "failed" && (
+                                <span className="text-destructive font-medium flex items-center gap-1">
+                                  <AlertCircle className="w-3 h-3" /> Failed
+                                </span>
+                              )}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center justify-between text-[11px] font-mono text-muted-foreground mt-1">
+                            <span className="truncate max-w-[170px]" title={sub.transcript_job_id}>
+                              Job: {sub.transcript_job_id ? sub.transcript_job_id.slice(0, 16) + "..." : "N/A"}
+                            </span>
+                            <span>
+                              {sub.created_at ? new Date(sub.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Recently"}
+                            </span>
+                          </div>
+
+                          {isProcessing && (
+                            <div className="mt-2 text-[11px] text-primary flex items-center gap-1">
+                              <Loader2 className="w-3 h-3 animate-spin" /> Loading brief from database...
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* Active Brief View */}
+            {/* Right Column: Active Brief View */}
             <div className="lg:col-span-7 space-y-6">
               <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
                 <div className="flex items-center justify-between mb-4 pb-3 border-b border-border">

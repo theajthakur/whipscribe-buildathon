@@ -255,16 +255,34 @@ def check_transcription_status(
         else:
             try:
                 whip_client = WhipScribeClient()
-                job_status_obj = whip_client.jobs.get_status(job_id)
+                job_status_obj = whip_client.jobs.get(job_id)
 
                 if job_status_obj.status == JobStatus.DONE:
                     tx_obj = whip_client.jobs.get_transcript(job_id, format=TranscriptFormat.JSON)
-                    transcript_json = tx_obj.lines if hasattr(tx_obj, "lines") else tx_obj
+                    if hasattr(tx_obj, "segments"):
+                        formatted_lines = []
+                        for seg in tx_obj.segments:
+                            start_secs = int(getattr(seg, "start", 0) or 0)
+                            m, s = divmod(start_secs, 60)
+                            formatted_lines.append({
+                                "time": f"{m:02d}:{s:02d}",
+                                "speaker": getattr(seg, "speaker", None) or "SPEAKER",
+                                "text": getattr(seg, "text", "") or ""
+                            })
+                        transcript_json = formatted_lines
+                    elif isinstance(tx_obj, list):
+                        transcript_json = tx_obj
+                    else:
+                        transcript_json = [{"time": "00:00", "speaker": "SPEAKER", "text": str(tx_obj)}]
+
                     current_status = "completed"
                     crud.update_submission_status(db, submission_id, status="completed", transcript_json=transcript_json)
-                elif job_status_obj.status == JobStatus.ERROR:
+                elif job_status_obj.status == JobStatus.FAILED:
                     current_status = "failed"
                     crud.update_submission_status(db, submission_id, status="failed")
+                elif job_status_obj.status in (JobStatus.QUEUED, JobStatus.PROCESSING):
+                    current_status = "transcribing"
+                    crud.update_submission_status(db, submission_id, status="transcribing")
 
             except Exception as e:
                 logger.warning(f"WhipScribe job status check note: {e}")
@@ -298,8 +316,35 @@ def process_agent_call(
         raise HTTPException(status_code=400, detail="Submission transcript not ready or unauthorized")
 
     settings = crud.get_or_create_settings(db, user_id=user_id)
-    orchestrator = AgentOrchestrator()
 
+    # Return cached call record if already processed and no override requested
+    if not payload.override_intent:
+        existing_call = db.query(models.Call).filter(models.Call.user_submission_id == sub.id).first()
+        if existing_call:
+            items = db.query(models.Item).filter(models.Item.call_id == existing_call.id).all()
+            reqs = [it for it in items if it.type == "requirement"]
+            tasks = [it for it in items if it.type == "task"]
+            client_drafts = [it.text for it in items if it.type == "message"]
+            return {
+                "status": "success",
+                "call_id": existing_call.id,
+                "router_result": {
+                    "intent": existing_call.detected_intent or "discovery",
+                    "confidence": existing_call.confidence or 1.0,
+                    "reason": "Retrieved from database",
+                    "needs_human_confirmation": False,
+                },
+                "proposal": {
+                    "summary": "Retrieved existing call proposal from database.",
+                    "requirements": [{"id": r.id, "category": "requirement", "text": r.text, "time": r.timestamp_link or "00:00"} for r in reqs],
+                    "tasks": [{"id": t.id, "title": t.text, "effort": t.effort or "M", "time": t.timestamp_link or "00:00", "estimated_hours": 4} for t in tasks],
+                    "quote": {"total_price": settings.hourly_rate * 10, "total_hours": 10, "hourly_rate": settings.hourly_rate},
+                    "client_message_draft": client_drafts[0] if client_drafts else "",
+                },
+                "saved_items": [{"id": it.id, "type": it.type, "text": it.text, "time": it.timestamp_link} for it in items],
+            }
+
+    orchestrator = AgentOrchestrator()
     override = CallIntent(payload.override_intent) if payload.override_intent else None
 
     # Run Agentic Orchestration
@@ -349,6 +394,17 @@ def process_agent_call(
             )
             saved_items.append({"id": item.id, "type": item.type, "text": item.text, "time": item.timestamp_link, "effort": item.effort})
 
+        # Save client confirmation message draft if available
+        if result.proposal.client_message_draft:
+            msg_item = crud.add_item_to_call(
+                db=db,
+                call_id=call_record.id,
+                item_type="message",
+                text=result.proposal.client_message_draft,
+                original_agent_text=result.proposal.client_message_draft,
+            )
+            saved_items.append({"id": msg_item.id, "type": msg_item.type, "text": msg_item.text, "time": None})
+
     # Log Agent Run for auditing
     crud.log_agent_run(
         db=db,
@@ -380,17 +436,24 @@ def list_user_submissions(
         .order_by(models.UserSubmission.created_at.desc())
         .all()
     )
-    return [
-        {
+    result = []
+    for s in subs:
+        raw_loc = s.source_location or ""
+        fname = raw_loc.split("/")[-1]
+        if "_" in fname:
+            fname = fname.split("_", 1)[-1]
+        result.append({
             "id": s.id,
             "source_type": s.source_type,
             "source_location": s.source_location,
+            "filename": fname or "recording.mp3",
             "status": s.status,
             "transcript_job_id": s.transcript_job_id,
-            "created_at": s.created_at.isoformat(),
-        }
-        for s in subs
-    ]
+            "created_at": s.created_at.isoformat() if s.created_at else None,
+            "has_transcript": s.transcript_json is not None,
+            "calls": [c.id for c in s.calls] if s.calls else [],
+        })
+    return result
 
 
 @app.get("/api/calls/{call_id}")
