@@ -91,7 +91,7 @@ export function Hero() {
               <div className="flex items-center justify-between text-xs font-mono font-semibold text-muted-foreground px-1 pb-1 border-b border-border/50">
                 <span className="flex items-center gap-1.5 text-foreground">
                   <FileAudio className="w-3.5 h-3.5 text-primary" />
-                  RAW SOURCE TRANSCRIPT
+                  Raw Source Transcript
                 </span>
                 <span className="text-[11px] text-muted-foreground font-sans">02:45 audio</span>
               </div>

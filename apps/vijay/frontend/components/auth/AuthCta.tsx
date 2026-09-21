@@ -1,13 +1,15 @@
 "use client"
 
-import { SignInButton, useAuth } from "@clerk/nextjs"
+import { useAuth } from "@clerk/nextjs"
 import { useRouter } from "next/navigation"
+import { useAuthModal } from "./AuthModalContext"
 import { Button } from "@/components/ui/Button"
 
 interface AuthCtaProps {
   size?: "sm" | "md" | "lg"
   className?: string
   label?: { signedIn: string; signedOut: string }
+  mode?: "sign-in" | "sign-up"
   children?: React.ReactNode
 }
 
@@ -15,9 +17,11 @@ export function AuthCta({
   size = "lg",
   className,
   label = { signedIn: "Open dashboard", signedOut: "Start with a call" },
+  mode = "sign-up",
   children,
 }: AuthCtaProps) {
   const { isSignedIn } = useAuth()
+  const { openAuthModal } = useAuthModal()
   const router = useRouter()
 
   if (isSignedIn) {
@@ -33,10 +37,12 @@ export function AuthCta({
   }
 
   return (
-    <SignInButton mode="modal">
-      <Button size={size} className={className}>
-        {children || label.signedOut}
-      </Button>
-    </SignInButton>
+    <Button
+      size={size}
+      className={className}
+      onClick={() => openAuthModal(mode)}
+    >
+      {children || label.signedOut}
+    </Button>
   )
 }

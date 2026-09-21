@@ -1,6 +1,8 @@
 import { ClerkProvider } from "@clerk/nextjs"
 import type { Metadata } from "next"
 import { Sora, Figtree, IBM_Plex_Mono } from "next/font/google"
+import { AuthModalProvider } from "@/components/auth/AuthModalContext"
+import { AuthModal } from "@/components/auth/AuthModal"
 import "./globals.css"
 
 const fontSora = Sora({
@@ -39,7 +41,12 @@ export default function RootLayout({
       className={`${fontSora.variable} ${fontFigtree.variable} ${fontPlexMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-background text-foreground font-sans">
-        <ClerkProvider>{children}</ClerkProvider>
+        <ClerkProvider>
+          <AuthModalProvider>
+            {children}
+            <AuthModal />
+          </AuthModalProvider>
+        </ClerkProvider>
       </body>
     </html>
   )
