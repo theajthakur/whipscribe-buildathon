@@ -1,15 +1,11 @@
 "use client"
 
 import { useState, useEffect, useCallback, useRef, Suspense } from "react"
-
 import { UserButton, useAuth } from "@clerk/nextjs"
-import { Container } from "@/components/ui/Container"
-import { Heading } from "@/components/ui/Heading"
 import { Badge } from "@/components/ui/Badge"
 import { UploadMock } from "@/components/mocks/UploadMock"
 import { BriefPanel } from "@/components/mocks/BriefPanel"
 import { AudioPlayer, parseTimestampToSeconds } from "@/components/mocks/AudioPlayer"
-import { mockBriefItems } from "@/data/mockContent"
 import { api } from "@/lib/api"
 import { useQueryState, parseAsString } from "nuqs"
 import Link from "next/link"
@@ -25,6 +21,9 @@ import {
   AlertCircle,
   RefreshCw,
   FileAudio,
+  Sparkles,
+  Copy,
+  Check,
 } from "lucide-react"
 
 export interface SubmissionItem {
@@ -50,10 +49,21 @@ function DashboardContent() {
 
   const [activeCallData, setActiveCallData] = useState<any>(null)
   const [audioData, setAudioData] = useState<{ audioUrl: string | null; source: string } | null>(null)
+  const [isAudioClosed, setIsAudioClosed] = useState(false)
   const [selectedFilename, setSelectedFilename] = useState<string>("")
   const [submissions, setSubmissions] = useState<SubmissionItem[]>([])
   const [loadingHistory, setLoadingHistory] = useState(true)
   const [processingSubId, setProcessingSubId] = useState<string | null>(null)
+  const [copiedDraft, setCopiedDraft] = useState(false)
+
+  useEffect(() => {
+    if (audioData?.audioUrl) {
+      setIsAudioClosed(false)
+    }
+  }, [audioData])
+
+  const hasActiveAudio = Boolean(audioData?.audioUrl) && !isAudioClosed
+
 
   const fetchSubmissions = useCallback(async () => {
     try {
@@ -138,28 +148,27 @@ function DashboardContent() {
 
   const itemsToDisplay = activeCallData?.proposal
     ? [
-      ...(activeCallData.proposal.requirements || []).map((r: any) => ({
-        id: r.id || Math.random().toString(),
-        type: "requirement" as const,
-        text: r.text,
-        time: r.time,
-        transcriptRef: "t1",
-      })),
-      ...(activeCallData.proposal.tasks || []).map((t: any) => ({
-        id: t.id || Math.random().toString(),
-        type: "task" as const,
-        text: `${t.title} [Effort: ${t.effort || "M"}]`,
-        time: t.time,
-        transcriptRef: "t2",
-      })),
-    ]
+        ...(activeCallData.proposal.requirements || []).map((r: any) => ({
+          id: r.id || Math.random().toString(),
+          type: "requirement" as const,
+          text: r.text,
+          time: r.time,
+          transcriptRef: "t1",
+        })),
+        ...(activeCallData.proposal.tasks || []).map((t: any) => ({
+          id: t.id || Math.random().toString(),
+          type: "task" as const,
+          text: `${t.title} [Effort: ${t.effort || "M"}]`,
+          time: t.time,
+          transcriptRef: "t2",
+        })),
+      ]
     : []
 
   const handleAudioTimeUpdate = useCallback(
     (currentTime: number) => {
       if (!itemsToDisplay || itemsToDisplay.length === 0) return
 
-      // Sort items by their timestamp in seconds
       const itemsWithSeconds = itemsToDisplay
         .map((item: any) => ({
           id: item.id,
@@ -196,219 +205,254 @@ function DashboardContent() {
     [itemsToDisplay, activeItemId]
   )
 
-  return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col">
-      {/* Header */}
-      <header className="border-b border-border bg-card">
-        <Container>
-          <div className="flex h-16 items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Link
-                href="/"
-                className="text-sm font-medium text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
-              >
-                <ArrowLeft className="w-4 h-4" /> Home
-              </Link>
-              <span className="text-border">|</span>
-              <h1 className="font-display font-bold text-xl text-foreground">
-                CallBrief Workspace
-              </h1>
-            </div>
+  const copyDraftToClipboard = () => {
+    if (activeCallData?.proposal?.client_message_draft) {
+      navigator.clipboard.writeText(activeCallData.proposal.client_message_draft)
+      setCopiedDraft(true)
+      setTimeout(() => setCopiedDraft(false), 2000)
+    }
+  }
 
-            <div className="flex items-center gap-4">
-              <UserButton />
+  return (
+    <div className="min-h-screen lg:h-screen w-full bg-background text-foreground flex flex-col overflow-x-hidden lg:overflow-hidden font-sans">
+      {/* Sleek Glassmorphism Header */}
+      <header className="h-14 border-b border-border bg-card/80 backdrop-blur-md px-4 lg:px-6 flex items-center justify-between shrink-0 z-30">
+        <div className="flex items-center gap-3">
+          <Link
+            href="/"
+            className="text-xs font-medium text-muted-foreground hover:text-foreground inline-flex items-center gap-1 py-1 px-2.5 rounded-md hover:bg-muted/50 transition-colors"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" /> Home
+          </Link>
+          <span className="text-border">/</span>
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
+              <Sparkles className="w-3.5 h-3.5 text-primary" />
             </div>
+            <h1 className="font-display font-bold text-sm text-foreground tracking-tight">
+              CallBrief Workspace
+            </h1>
           </div>
-        </Container>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <button
+            onClick={fetchSubmissions}
+            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors flex items-center gap-1.5 text-xs font-mono"
+            title="Refresh history"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Refresh</span>
+          </button>
+          <div className="h-4 w-px bg-border" />
+          <UserButton />
+        </div>
       </header>
 
-      {/* Content */}
-      <main className="flex-1 py-10 pb-24">
-        <Container>
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-8">
-            <div>
-              <Heading as="h1" size="lg" className="mb-1">
-                Your Call Briefs
-              </Heading>
-              <p className="text-muted-foreground text-sm">
-                Upload call recordings or audio notes to generate structured briefs and task lists with WhipScribe & Vertex AI.
-              </p>
-            </div>
-          </div>
+      {/* Main Workspace - Adaptive Viewport Container */}
+      <main className="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
+        {/* Left Column / Sidebar: New Upload & Recording History */}
+        <div className="w-full lg:w-[420px] xl:w-[460px] shrink-0 border-r border-border bg-card/30 flex flex-col h-auto lg:h-full overflow-hidden">
+          
+          {/* Scrollable Container for Upload & Submissions List */}
+          <div className={`flex-1 overflow-y-auto p-4 space-y-4 ${hasActiveAudio ? "pb-28 lg:pb-24" : "pb-6"}`}>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            {/* Left Column: Upload Box + Submissions History */}
-            <div className="lg:col-span-5 space-y-6">
-              {/* Upload Box */}
-              <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
-                <h2 className="font-display font-semibold text-lg text-foreground mb-4 flex items-center gap-2">
-                  <Plus className="w-4 h-4 text-primary" /> New Call Recording
+            
+            {/* 1. New Recording Box */}
+            <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="font-display font-semibold text-xs text-foreground flex items-center gap-1.5 uppercase tracking-wider">
+                  <Plus className="w-3.5 h-3.5 text-primary" /> New Call Recording
                 </h2>
-                <UploadMock
-                  onComplete={handleUploadComplete}
-                  onUploadSuccess={fetchSubmissions}
-                />
               </div>
-
-              {/* Submissions DB History List */}
-              <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
-                <div className="flex items-center justify-between mb-4 pb-3 border-b border-border">
-                  <h2 className="font-display font-semibold text-base text-foreground flex items-center gap-2">
-                    <History className="w-4 h-4 text-primary" /> Uploaded Files & WhipScribe Status
-                  </h2>
-                  <button
-                    onClick={fetchSubmissions}
-                    className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                    title="Refresh history"
-                  >
-                    <RefreshCw className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-
-                {loadingHistory ? (
-                  <div className="flex items-center justify-center py-6 text-xs text-muted-foreground">
-                    <Loader2 className="w-4 h-4 animate-spin mr-2" /> Loading past recordings...
-                  </div>
-                ) : submissions.length === 0 ? (
-                  <p className="text-xs text-muted-foreground text-center py-4">
-                    No files uploaded yet. Upload a recording above to get started.
-                  </p>
-                ) : (
-                  <div className="space-y-2.5 max-h-[350px] overflow-y-auto pr-1">
-                    {submissions.map((sub) => {
-                      const isSelected = selectedSubId === sub.id
-                      const isProcessing = processingSubId === sub.id
-
-                      return (
-                        <div
-                          key={sub.id}
-                          onClick={() => handleSelectSubmission(sub)}
-                          className={`p-3 rounded-lg border text-xs cursor-pointer transition-colors ${isSelected
-                              ? "border-primary/50 bg-primary/10"
-                              : "border-border bg-muted/20 hover:border-border/80 hover:bg-muted/40"
-                            }`}
-                        >
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="font-semibold text-foreground truncate max-w-[200px] flex items-center gap-1.5">
-                              <FileAudio className="w-3.5 h-3.5 text-primary shrink-0" />
-                              {sub.filename}
-                            </span>
-                            <span className="font-mono text-[10px] px-2 py-0.5 rounded-full border">
-                              {sub.status === "completed" && (
-                                <span className="text-emerald-500 font-medium flex items-center gap-1">
-                                  <CheckCircle2 className="w-3 h-3" /> Completed
-                                </span>
-                              )}
-                              {sub.status === "transcribing" && (
-                                <span className="text-amber-500 font-medium flex items-center gap-1">
-                                  <Loader2 className="w-3 h-3 animate-spin" /> Transcribing
-                                </span>
-                              )}
-                              {sub.status === "pending" && (
-                                <span className="text-amber-400 font-medium flex items-center gap-1">
-                                  <Clock className="w-3 h-3" /> Pending
-                                </span>
-                              )}
-                              {sub.status === "failed" && (
-                                <span className="text-destructive font-medium flex items-center gap-1">
-                                  <AlertCircle className="w-3 h-3" /> Failed
-                                </span>
-                              )}
-                            </span>
-                          </div>
-
-                          <div className="flex items-center justify-between text-[11px] font-mono text-muted-foreground mt-1">
-                            <span className="truncate max-w-[170px]" title={sub.transcript_job_id}>
-                              Job: {sub.transcript_job_id ? sub.transcript_job_id.slice(0, 16) + "..." : "N/A"}
-                            </span>
-                            <span>
-                              {sub.created_at ? new Date(sub.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Recently"}
-                            </span>
-                          </div>
-
-                          {isProcessing && (
-                            <div className="mt-2 text-[11px] text-primary flex items-center gap-1">
-                              <Loader2 className="w-3 h-3 animate-spin" /> Loading brief from database...
-                            </div>
-                          )}
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
+              <UploadMock
+                onComplete={handleUploadComplete}
+                onUploadSuccess={fetchSubmissions}
+              />
             </div>
 
-            {/* Right Column: Active Brief View or Empty State */}
-            <div className="lg:col-span-7 space-y-6">
-              {activeCallData ? (
-                <div className="rounded-xl border border-border bg-card p-6 shadow-sm max-h-[620px] flex flex-col overflow-hidden">
-                  <div className="flex items-center justify-between mb-4 pb-3 border-b border-border shrink-0">
-                    <div className="flex items-center gap-2">
-                      <FileText className="w-4 h-4 text-primary" />
-                      <h2 className="font-display font-semibold text-base text-foreground">
-                        Processed Call Proposal
-                      </h2>
-                    </div>
-                    <Badge variant="success" className="text-xs">
-                      <Clock className="w-3 h-3 mr-1" /> Active
-                    </Badge>
-                  </div>
+            {/* 2. Submissions DB History List */}
+            <div className="rounded-xl border border-border bg-card p-4 shadow-sm flex flex-col">
+              <div className="flex items-center justify-between mb-3 pb-2 border-b border-border">
+                <h2 className="font-display font-semibold text-xs text-foreground flex items-center gap-1.5 uppercase tracking-wider">
+                  <History className="w-3.5 h-3.5 text-primary" /> Recording History
+                </h2>
+                <span className="text-[10px] font-mono text-muted-foreground bg-muted/50 px-2 py-0.5 rounded-full">
+                  {submissions.length} files
+                </span>
+              </div>
 
-                  <div className="overflow-y-auto space-y-4 pr-1.5 flex-1">
-                    {activeCallData?.router_result && (
-                      <div className="p-3 rounded-lg bg-primary/10 border border-primary/20 text-xs flex items-center justify-between">
-                        <div>
-                          <span className="font-bold text-foreground">Detected Intent: </span>
-                          <span className="font-mono text-primary font-semibold uppercase">
-                            {activeCallData.router_result.intent}
+              {loadingHistory ? (
+                <div className="flex items-center justify-center py-8 text-xs text-muted-foreground">
+                  <Loader2 className="w-4 h-4 animate-spin mr-2 text-primary" /> Loading history...
+                </div>
+              ) : submissions.length === 0 ? (
+                <p className="text-xs text-muted-foreground text-center py-6">
+                  No recordings processed yet. Upload a file above to get started.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {submissions.map((sub) => {
+                    const isSelected = selectedSubId === sub.id
+                    const isProcessing = processingSubId === sub.id
+
+                    return (
+                      <div
+                        key={sub.id}
+                        onClick={() => handleSelectSubmission(sub)}
+                        className={`p-3 rounded-lg border text-xs cursor-pointer transition-all ${
+                          isSelected
+                            ? "border-primary/50 bg-primary/10 shadow-sm ring-1 ring-primary/20"
+                            : "border-border/80 bg-muted/20 hover:border-border hover:bg-muted/40"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-1 gap-2">
+                          <span className="font-semibold text-foreground truncate flex items-center gap-1.5 min-w-0">
+                            <FileAudio className="w-3.5 h-3.5 text-primary shrink-0" />
+                            <span className="truncate">{sub.filename}</span>
+                          </span>
+                          <span className="font-mono text-[10px] shrink-0">
+                            {sub.status === "completed" && (
+                              <span className="text-emerald-500 font-medium flex items-center gap-1 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                                <CheckCircle2 className="w-3 h-3" /> Completed
+                              </span>
+                            )}
+                            {sub.status === "transcribing" && (
+                              <span className="text-amber-500 font-medium flex items-center gap-1 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
+                                <Loader2 className="w-3 h-3 animate-spin" /> Transcribing
+                              </span>
+                            )}
+                            {sub.status === "pending" && (
+                              <span className="text-amber-400 font-medium flex items-center gap-1 bg-amber-400/10 px-2 py-0.5 rounded-full border border-amber-400/20">
+                                <Clock className="w-3 h-3" /> Pending
+                              </span>
+                            )}
+                            {sub.status === "failed" && (
+                              <span className="text-destructive font-medium flex items-center gap-1 bg-destructive/10 px-2 py-0.5 rounded-full border border-destructive/20">
+                                <AlertCircle className="w-3 h-3" /> Failed
+                              </span>
+                            )}
                           </span>
                         </div>
-                        <span className="text-muted-foreground">
-                          Confidence: {(activeCallData.router_result.confidence * 100).toFixed(0)}%
-                        </span>
-                      </div>
-                    )}
 
-                    <BriefPanel
-                      items={itemsToDisplay}
-                      activeItemId={activeItemId}
-                      onChipClick={handleChipClick}
-                    />
+                        <div className="flex items-center justify-between text-[11px] font-mono text-muted-foreground mt-1.5">
+                          <span className="truncate max-w-[180px]" title={sub.transcript_job_id}>
+                            Job: {sub.transcript_job_id ? sub.transcript_job_id.slice(0, 16) + "..." : "N/A"}
+                          </span>
+                          <span>
+                            {sub.created_at ? new Date(sub.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Recently"}
+                          </span>
+                        </div>
 
-                    {activeCallData?.proposal?.client_message_draft && (
-                      <div className="mt-4 pt-4 border-t border-border">
-                        <div className="flex items-center gap-2 text-xs font-mono font-semibold text-foreground mb-2">
-                          <MessageSquare className="w-3.5 h-3.5 text-primary" />
-                          DRAFTED CLIENT CONFIRMATION MESSAGE
-                        </div>
-                        <div className="p-3 rounded-lg bg-muted/40 border border-border text-xs text-foreground/90 font-sans whitespace-pre-line">
-                          {activeCallData.proposal.client_message_draft}
-                        </div>
+                        {isProcessing && (
+                          <div className="mt-2 text-[11px] text-primary flex items-center gap-1 font-mono">
+                            <Loader2 className="w-3 h-3 animate-spin" /> Loading brief proposal...
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                /* Empty State when no active call is selected */
-                <div className="rounded-xl border border-dashed border-border bg-card/50 p-12 text-center flex flex-col items-center justify-center min-h-[400px]">
-                  <div className="w-14 h-14 rounded-2xl bg-muted/40 flex items-center justify-center mb-4 text-muted-foreground">
-                    <FileText className="w-7 h-7 text-primary/70" />
-                  </div>
-                  <h3 className="font-display font-semibold text-lg text-foreground mb-2">
-                    No Call Proposal Selected
-                  </h3>
-                  <p className="text-xs text-muted-foreground max-w-sm mb-6 leading-relaxed">
-                    Upload an audio recording on the left or select a past submission from history to view its AI proposal, task breakdown, and drafted client message.
-                  </p>
+                    )
+                  })}
                 </div>
               )}
             </div>
           </div>
-        </Container>
+        </div>
+
+        {/* Right Panel: Main Call Brief Proposal Workspace */}
+        <div className="flex-1 flex flex-col h-auto lg:h-full overflow-hidden bg-background">
+          {activeCallData ? (
+            <div className="flex-1 flex flex-col h-full overflow-hidden">
+              {/* Proposal Header Bar */}
+              <div className="h-12 border-b border-border bg-card/40 px-6 flex items-center justify-between shrink-0">
+                <div className="flex items-center gap-2 min-w-0">
+                  <FileText className="w-4 h-4 text-primary shrink-0" />
+                  <h2 className="font-display font-semibold text-sm text-foreground truncate">
+                    Proposal: {selectedFilename || "Call Recording"}
+                  </h2>
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  <Badge variant="success" className="text-[11px] font-mono">
+                    <Clock className="w-3 h-3 mr-1" /> Active
+                  </Badge>
+                </div>
+              </div>
+
+              {/* Scrollable Brief Body */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-6 pb-28">
+                {activeCallData?.router_result && (
+                  <div className="p-4 rounded-xl bg-primary/10 border border-primary/20 text-xs flex items-center justify-between shadow-sm">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-primary shrink-0" />
+                      <div>
+                        <span className="text-muted-foreground">Detected Intent: </span>
+                        <span className="font-mono text-primary font-bold uppercase tracking-wide">
+                          {activeCallData.router_result.intent}
+                        </span>
+                      </div>
+                    </div>
+                    <span className="text-muted-foreground font-mono text-[11px] bg-background/50 px-2.5 py-1 rounded-md border border-border">
+                      Confidence: {(activeCallData.router_result.confidence * 100).toFixed(0)}%
+                    </span>
+                  </div>
+                )}
+
+                {/* Brief Items Panel with Interactive Timestamp Chips */}
+                <BriefPanel
+                  items={itemsToDisplay}
+                  activeItemId={activeItemId}
+                  onChipClick={handleChipClick}
+                />
+
+                {/* Drafted Client Message Card */}
+                {activeCallData?.proposal?.client_message_draft && (
+                  <div className="rounded-xl border border-border bg-card p-5 shadow-sm space-y-3">
+                    <div className="flex items-center justify-between pb-2 border-b border-border">
+                      <div className="flex items-center gap-2 text-xs font-mono font-semibold text-foreground">
+                        <MessageSquare className="w-4 h-4 text-primary" />
+                        DRAFTED CLIENT CONFIRMATION MESSAGE
+                      </div>
+                      <button
+                        onClick={copyDraftToClipboard}
+                        className="px-2.5 py-1 rounded-md text-xs font-mono border border-border hover:bg-muted transition-colors flex items-center gap-1.5 text-muted-foreground hover:text-foreground"
+                      >
+                        {copiedDraft ? (
+                          <>
+                            <Check className="w-3.5 h-3.5 text-emerald-500" />
+                            <span className="text-emerald-500 font-medium">Copied!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3.5 h-3.5" />
+                            <span>Copy Draft</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                    <div className="p-4 rounded-lg bg-muted/30 border border-border/80 text-xs text-foreground/90 font-sans leading-relaxed whitespace-pre-line">
+                      {activeCallData.proposal.client_message_draft}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            /* Modern Full Viewport Empty State */
+            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-muted/10 min-h-[350px]">
+              <div className="w-16 h-16 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center mb-4 text-primary shadow-inner">
+                <FileText className="w-8 h-8" />
+              </div>
+              <h3 className="font-display font-semibold text-xl text-foreground mb-2">
+                No Call Proposal Selected
+              </h3>
+              <p className="text-xs text-muted-foreground max-w-md leading-relaxed mb-6">
+                Upload a call recording or audio note on the left sidebar, or select a past submission from history to view its AI proposal breakdown, task list, and client draft.
+              </p>
+            </div>
+          )}
+        </div>
       </main>
 
-      {/* Modern Responsive Fixed Bottom Audio Player Bar */}
+      {/* Modern Responsive Fixed Bottom Audio Player */}
       <AudioPlayer
         audioUrl={audioData?.audioUrl || null}
         audioRef={audioRef}
@@ -425,7 +469,7 @@ export default function DashboardPage() {
     <Suspense
       fallback={
         <div className="min-h-screen bg-background flex items-center justify-center text-muted-foreground text-sm">
-          <Loader2 className="w-5 h-5 animate-spin mr-2 text-primary" /> Loading CallBrief Dashboard...
+          <Loader2 className="w-5 h-5 animate-spin mr-2 text-primary" /> Loading CallBrief Workspace...
         </div>
       }
     >
@@ -433,4 +477,3 @@ export default function DashboardPage() {
     </Suspense>
   )
 }
-

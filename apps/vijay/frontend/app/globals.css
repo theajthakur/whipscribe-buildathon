@@ -155,7 +155,32 @@
     background-color: var(--accent);
     color: var(--accent-foreground);
   }
+
+  /* Modern Slim Scrollbar (replaces ugly browser defaults) */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 9999px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--muted-foreground);
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
 }
+
 
 @media (prefers-reduced-motion: reduce) {
   html {
