@@ -171,6 +171,13 @@ export const api = {
     return res.data
   },
 
+  async deleteSubmission(submissionId: string) {
+    const res = await apiClient.delete<{ status: string; deleted_submission_id: string }>(
+      `/api/submissions/${submissionId}`
+    )
+    return res.data
+  },
+
   async getUserSettings() {
     const res = await apiClient.get("/api/settings")
     return res.data
@@ -185,3 +192,4 @@ export const api = {
     return res.data
   },
 }
+

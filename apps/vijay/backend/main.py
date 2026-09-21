@@ -642,6 +642,39 @@ def list_user_submissions(
     return result
 
 
+@app.delete("/api/submissions/{submission_id}")
+def delete_user_submission(
+    submission_id: str,
+    user_id: str = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+):
+    """Deletes a submission and associated call records/items for current authenticated user."""
+    sub = (
+        db.query(models.UserSubmission)
+        .filter(models.UserSubmission.id == submission_id, models.UserSubmission.user_id == user_id)
+        .first()
+    )
+
+    if not sub:
+        raise HTTPException(status_code=404, detail="Submission not found or unauthorized")
+
+    # Optionally delete saved local audio file
+    if sub.source_location:
+        raw_name = os.path.basename(sub.source_location)
+        local_path = UPLOAD_DIR / raw_name
+        if local_path.exists():
+            try:
+                os.remove(local_path)
+            except Exception as e:
+                logger.warning(f"Could not remove local file '{local_path}': {e}")
+
+    db.delete(sub)
+    db.commit()
+
+    return {"status": "success", "deleted_submission_id": submission_id}
+
+
+
 @app.get("/api/calls/{call_id}")
 def get_call_details(
     call_id: str,

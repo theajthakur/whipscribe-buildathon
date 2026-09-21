@@ -25,6 +25,8 @@ import {
   Copy,
   Check,
   ChevronDown,
+  Trash2,
+  AlertTriangle,
 } from "lucide-react"
 
 export interface SubmissionItem {
@@ -58,6 +60,10 @@ function DashboardContent() {
   const [copiedDraft, setCopiedDraft] = useState(false)
   const [isUploaderOpen, setIsUploaderOpen] = useState(false)
   const [isHistoryOpen, setIsHistoryOpen] = useState(true)
+
+  const [subToDelete, setSubToDelete] = useState<SubmissionItem | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+
 
   const toggleUploader = () => {
     setIsUploaderOpen((prev) => !prev)
@@ -227,6 +233,30 @@ function DashboardContent() {
     }
   }
 
+  const confirmDeleteSubmission = async () => {
+    if (!subToDelete) return
+    try {
+      setIsDeleting(true)
+      api.setUserId(userId || null)
+      await api.deleteSubmission(subToDelete.id)
+
+      if (selectedSubId === subToDelete.id) {
+        setSelectedSubId("")
+        setActiveCallData(null)
+        setAudioData(null)
+        setSelectedFilename("")
+      }
+
+      fetchSubmissions()
+      setSubToDelete(null)
+    } catch (err) {
+      console.error("Failed to delete submission", err)
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
+
   return (
     <div className="h-screen w-screen max-w-full bg-background text-foreground flex flex-col overflow-hidden font-sans">
       {/* Sleek Glassmorphism Header (Navbar) */}
@@ -371,28 +401,40 @@ function DashboardContent() {
                                 <FileAudio className="w-3.5 h-3.5 text-primary shrink-0" />
                                 <span className="truncate">{sub.filename}</span>
                               </span>
-                              <span className="font-mono text-[10px] shrink-0">
-                                {sub.status === "completed" && (
-                                  <span className="text-emerald-500 font-medium flex items-center gap-1 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                                    <CheckCircle2 className="w-3 h-3" /> Completed
-                                  </span>
-                                )}
-                                {sub.status === "transcribing" && (
-                                  <span className="text-amber-500 font-medium flex items-center gap-1 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
-                                    <Loader2 className="w-3 h-3 animate-spin" /> Transcribing
-                                  </span>
-                                )}
-                                {sub.status === "pending" && (
-                                  <span className="text-amber-400 font-medium flex items-center gap-1 bg-amber-400/10 px-2 py-0.5 rounded-full border border-amber-400/20">
-                                    <Clock className="w-3 h-3" /> Pending
-                                  </span>
-                                )}
-                                {sub.status === "failed" && (
-                                  <span className="text-destructive font-medium flex items-center gap-1 bg-destructive/10 px-2 py-0.5 rounded-full border border-destructive/20">
-                                    <AlertCircle className="w-3 h-3" /> Failed
-                                  </span>
-                                )}
-                              </span>
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                <span className="font-mono text-[10px]">
+                                  {sub.status === "completed" && (
+                                    <span className="text-emerald-500 font-medium flex items-center gap-1 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                                      <CheckCircle2 className="w-3 h-3" /> Completed
+                                    </span>
+                                  )}
+                                  {sub.status === "transcribing" && (
+                                    <span className="text-amber-500 font-medium flex items-center gap-1 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
+                                      <Loader2 className="w-3 h-3 animate-spin" /> Transcribing
+                                    </span>
+                                  )}
+                                  {sub.status === "pending" && (
+                                    <span className="text-amber-400 font-medium flex items-center gap-1 bg-amber-400/10 px-2 py-0.5 rounded-full border border-amber-400/20">
+                                      <Clock className="w-3 h-3" /> Pending
+                                    </span>
+                                  )}
+                                  {sub.status === "failed" && (
+                                    <span className="text-destructive font-medium flex items-center gap-1 bg-destructive/10 px-2 py-0.5 rounded-full border border-destructive/20">
+                                      <AlertCircle className="w-3 h-3" /> Failed
+                                    </span>
+                                  )}
+                                </span>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    setSubToDelete(sub)
+                                  }}
+                                  className="p-1 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                                  title="Delete submission"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
                             </div>
 
                             <div className="flex items-center justify-between text-[11px] font-mono text-muted-foreground mt-1.5">
@@ -527,6 +569,54 @@ function DashboardContent() {
           onTimeUpdate={handleAudioTimeUpdate}
           onClose={() => setIsAudioClosed(true)}
         />
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {subToDelete && (
+        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="bg-card border border-border rounded-xl shadow-xl max-w-md w-full p-6 space-y-4">
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 rounded-full bg-destructive/10 border border-destructive/20 flex items-center justify-center text-destructive shrink-0">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="font-display font-semibold text-base text-foreground">
+                  Delete Recording Submission?
+                </h3>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Are you sure you want to delete <strong className="text-foreground">{subToDelete.filename}</strong>? This action will permanently remove the recording audio, transcript, and generated call brief proposal.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-border">
+              <button
+                onClick={() => setSubToDelete(null)}
+                disabled={isDeleting}
+                className="px-4 py-2 rounded-lg text-xs font-medium border border-border hover:bg-muted transition-colors text-foreground disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteSubmission}
+                disabled={isDeleting}
+                className="px-4 py-2 rounded-lg text-xs font-medium bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-colors flex items-center gap-1.5 disabled:opacity-50"
+              >
+                {isDeleting ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Deleting...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Delete Permanently</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
     </div>
