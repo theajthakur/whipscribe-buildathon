@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useEffect, useCallback, useRef } from "react"
+import { useState, useEffect, useCallback, useRef, Suspense } from "react"
+
 import { UserButton, useAuth } from "@clerk/nextjs"
 import { Container } from "@/components/ui/Container"
 import { Heading } from "@/components/ui/Heading"
@@ -10,6 +11,7 @@ import { BriefPanel } from "@/components/mocks/BriefPanel"
 import { AudioPlayer, parseTimestampToSeconds } from "@/components/mocks/AudioPlayer"
 import { mockBriefItems } from "@/data/mockContent"
 import { api } from "@/lib/api"
+import { useQueryState, parseAsString } from "nuqs"
 import Link from "next/link"
 import {
   Plus,
@@ -37,16 +39,20 @@ export interface SubmissionItem {
   calls: string[]
 }
 
-export default function DashboardPage() {
+function DashboardContent() {
   const { userId } = useAuth()
   const audioRef = useRef<HTMLAudioElement>(null)
+
+  // URL Query State preserving submission ID, active item, and timestamp using nuqs
+  const [selectedSubId, setSelectedSubId] = useQueryState("sub", parseAsString.withDefault(""))
+  const [activeItemId, setActiveItemId] = useQueryState("item", parseAsString.withDefault(""))
+  const [activeTime, setActiveTime] = useQueryState("time", parseAsString.withDefault(""))
+
   const [activeCallData, setActiveCallData] = useState<any>(null)
   const [audioData, setAudioData] = useState<{ audioUrl: string | null; source: string } | null>(null)
-  const [activeItemId, setActiveItemId] = useState<string | null>(null)
   const [selectedFilename, setSelectedFilename] = useState<string>("")
   const [submissions, setSubmissions] = useState<SubmissionItem[]>([])
   const [loadingHistory, setLoadingHistory] = useState(true)
-  const [selectedSubId, setSelectedSubId] = useState<string | null>(null)
   const [processingSubId, setProcessingSubId] = useState<string | null>(null)
 
   const fetchSubmissions = useCallback(async () => {
@@ -65,7 +71,7 @@ export default function DashboardPage() {
     fetchSubmissions()
   }, [fetchSubmissions])
 
-  const loadAudioForSubmission = async (subId: string) => {
+  const loadAudioForSubmission = useCallback(async (subId: string) => {
     try {
       api.setUserId(userId || null)
       const audioRes = await api.getSubmissionAudio(subId)
@@ -76,17 +82,9 @@ export default function DashboardPage() {
     } catch (err) {
       console.error("Failed to load submission audio URL", err)
     }
-  }
+  }, [userId])
 
-  const handleUploadComplete = async (agentResponse: any) => {
-    if (agentResponse && agentResponse.proposal) {
-      setActiveCallData(agentResponse)
-    }
-    fetchSubmissions()
-  }
-
-  const handleSelectSubmission = async (sub: SubmissionItem) => {
-    setSelectedSubId(sub.id)
+  const loadSubmissionDetails = useCallback(async (sub: SubmissionItem) => {
     setSelectedFilename(sub.filename)
     loadAudioForSubmission(sub.id)
 
@@ -103,28 +101,34 @@ export default function DashboardPage() {
       } finally {
         setProcessingSubId(null)
       }
-    } else if (sub.status === "pending" || sub.status === "transcribing") {
-      try {
-        setProcessingSubId(sub.id)
-        api.setUserId(userId || null)
-        const statusRes = await api.checkStatus(sub.id)
-        fetchSubmissions()
-        if (statusRes.status === "completed") {
-          const agentRes = await api.processAgent(sub.id)
-          if (agentRes && agentRes.proposal) {
-            setActiveCallData(agentRes)
-          }
-        }
-      } catch (err) {
-        console.error("Failed to check status", err)
-      } finally {
-        setProcessingSubId(null)
+    }
+  }, [userId, loadAudioForSubmission])
+
+  // Auto-restore state from URL query parameter `?sub=...` on initial load
+  useEffect(() => {
+    if (selectedSubId && submissions.length > 0 && !activeCallData) {
+      const targetSub = submissions.find((s) => s.id === selectedSubId)
+      if (targetSub) {
+        loadSubmissionDetails(targetSub)
       }
     }
+  }, [selectedSubId, submissions, activeCallData, loadSubmissionDetails])
+
+  const handleUploadComplete = async (agentResponse: any) => {
+    if (agentResponse && agentResponse.proposal) {
+      setActiveCallData(agentResponse)
+    }
+    fetchSubmissions()
+  }
+
+  const handleSelectSubmission = async (sub: SubmissionItem) => {
+    setSelectedSubId(sub.id)
+    loadSubmissionDetails(sub)
   }
 
   const handleChipClick = (timeStr: string, itemId: string) => {
     setActiveItemId(itemId)
+    setActiveTime(timeStr)
     if (audioRef.current && timeStr) {
       const targetSeconds = parseTimestampToSeconds(timeStr)
       audioRef.current.currentTime = targetSeconds
@@ -416,3 +420,18 @@ export default function DashboardPage() {
     </div>
   )
 }
+
+export default function DashboardPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-background flex items-center justify-center text-muted-foreground text-sm">
+          <Loader2 className="w-5 h-5 animate-spin mr-2 text-primary" /> Loading CallBrief Dashboard...
+        </div>
+      }
+    >
+      <DashboardContent />
+    </Suspense>
+  )
+}
+

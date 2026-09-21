@@ -3,6 +3,7 @@ import type { Metadata } from "next"
 import { Sora, Figtree, IBM_Plex_Mono } from "next/font/google"
 import { AuthModalProvider } from "@/components/auth/AuthModalContext"
 import { AuthModal } from "@/components/auth/AuthModal"
+import { NuqsAdapter } from "nuqs/adapters/next/app"
 import "./globals.css"
 
 const fontSora = Sora({
@@ -43,8 +44,10 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col bg-background text-foreground font-sans">
         <ClerkProvider>
           <AuthModalProvider>
-            {children}
-            <AuthModal />
+            <NuqsAdapter>
+              {children}
+              <AuthModal />
+            </NuqsAdapter>
           </AuthModalProvider>
         </ClerkProvider>
       </body>
