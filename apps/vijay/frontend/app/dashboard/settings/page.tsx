@@ -27,6 +27,21 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState<boolean>(false)
   const [savedSuccess, setSavedSuccess] = useState<boolean>(false)
 
+  // Exponential conversion helpers: 0-100% slider position <-> Exponential value [minVal, maxVal]
+  const percentToExp = (pct: number, minVal = 5, maxVal = 500) => {
+    const factor = Math.log10(maxVal / minVal)
+    const val = minVal * Math.pow(10, (pct / 100) * factor)
+    if (val < 20) return Math.round(val)
+    if (val < 100) return Math.round(val / 5) * 5
+    return Math.round(val / 10) * 10
+  }
+
+  const expToPercent = (val: number, minVal = 5, maxVal = 500) => {
+    const clamped = Math.max(minVal, Math.min(maxVal, val))
+    const factor = Math.log10(maxVal / minVal)
+    return (Math.log10(clamped / minVal) / factor) * 100
+  }
+
   useEffect(() => {
     async function loadSettings() {
       try {
@@ -129,23 +144,42 @@ export default function SettingsPage() {
                   </p>
                 </div>
 
-                {/* Hourly Rate Input */}
+                {/* Hourly Rate Input & Exponential Slider ($5 to $500 / hr) */}
                 <div className="space-y-2">
-                  <label htmlFor="hourlyRate" className="text-xs font-semibold text-foreground flex items-center justify-between">
-                    <span>Hourly Rate ({symbol}/hour)</span>
-                    <span className="text-[11px] font-mono text-muted-foreground">Required for quotes</span>
-                  </label>
-                  <div className="relative">
+                  <div className="flex items-center justify-between text-xs font-semibold text-foreground">
+                    <label htmlFor="hourlyRate">Hourly Rate ({symbol}/hour)</label>
+                    <span className="font-mono text-primary font-bold text-sm">{symbol}{hourlyRate}/hr</span>
+                  </div>
+
+                  <div className="space-y-2">
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      step="0.5"
+                      value={expToPercent(hourlyRate, 5, 500)}
+                      onChange={(e) => setHourlyRate(percentToExp(parseFloat(e.target.value), 5, 500))}
+                      className="w-full accent-primary h-2 bg-muted rounded-lg cursor-pointer"
+                    />
+                    <div className="flex justify-between text-[10px] font-mono text-muted-foreground">
+                      <span>{symbol}5/hr (min)</span>
+                      <span>Exponential 5–500</span>
+                      <span>{symbol}500/hr (max)</span>
+                    </div>
+                  </div>
+
+                  <div className="relative mt-2">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground font-mono">
                       {symbol}
                     </span>
                     <input
                       id="hourlyRate"
                       type="number"
-                      min="1"
-                      step="0.5"
+                      min="5"
+                      max="500"
+                      step="1"
                       value={hourlyRate}
-                      onChange={(e) => setHourlyRate(parseFloat(e.target.value) || 0)}
+                      onChange={(e) => setHourlyRate(Math.max(5, Math.min(500, parseFloat(e.target.value) || 5)))}
                       className="w-full bg-background border border-border rounded-lg py-2 pl-8 pr-4 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/50"
                       placeholder="100"
                     />
@@ -241,12 +275,18 @@ export default function SettingsPage() {
                       </div>
                       <input
                         type="range"
-                        min="1"
-                        max="80"
-                        value={testHours}
-                        onChange={(e) => setTestHours(parseInt(e.target.value) || 1)}
-                        className="w-full accent-primary h-1.5 bg-muted rounded-lg cursor-pointer"
+                        min="0"
+                        max="100"
+                        step="0.5"
+                        value={expToPercent(testHours, 5, 500)}
+                        onChange={(e) => setTestHours(percentToExp(parseFloat(e.target.value), 5, 500))}
+                        className="w-full accent-primary h-2 bg-muted rounded-lg cursor-pointer"
                       />
+                      <div className="flex justify-between text-[10px] font-mono text-muted-foreground">
+                        <span>5h</span>
+                        <span>Exponential 5–500h</span>
+                        <span>500h</span>
+                      </div>
                     </div>
 
                     <div className="pt-2 border-t border-primary/20 flex items-center justify-between">
@@ -258,13 +298,6 @@ export default function SettingsPage() {
                       </span>
                     </div>
                   </div>
-                </div>
-
-                <div className="p-3 rounded-lg bg-muted/30 border border-border text-[11px] text-muted-foreground flex items-start gap-2">
-                  <Sparkles className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-                  <span>
-                    Formula: <code className="font-mono text-foreground">Quote = Hourly Rate × Total Task Hours</code>. Task hours are extracted directly from call audio transcripts.
-                  </span>
                 </div>
               </div>
             </div>
