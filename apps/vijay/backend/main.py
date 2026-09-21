@@ -364,6 +364,10 @@ def process_agent_call(
         raise HTTPException(status_code=400, detail="Submission transcript not ready or unauthorized")
 
     settings = crud.get_or_create_settings(db, user_id=user_id)
+    user_record = db.query(models.User).filter(models.User.id == user_id).first()
+    user_name = f"{user_record.first_name or ''} {user_record.last_name or ''}".strip() if user_record else "Freelancer"
+    if not user_name:
+        user_name = "Freelancer"
 
     # Return cached call record if already processed and no override requested
     if not payload.override_intent:
@@ -401,6 +405,8 @@ def process_agent_call(
         client_id=payload.client_id,
         hourly_rate=settings.hourly_rate,
         currency=settings.currency,
+        message_tone=settings.message_tone,
+        user_name=user_name,
         override_intent=override,
     )
 

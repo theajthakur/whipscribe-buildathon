@@ -58,14 +58,17 @@ class PlaybookProcessor:
         transcript_text: str,
         hourly_rate: float = 100.0,
         currency: str = "USD",
+        message_tone: str = "friendly and professional",
+        user_name: str = "Freelancer",
     ) -> AgentProposal:
         """Runs the Discovery Playbook for first-time client calls."""
-        system_instruction = """You are an AI assistant for a freelance web developer processing a Discovery Call recording.
+        system_instruction = f"""You are an AI assistant for a freelance web developer ({user_name}) processing a Discovery Call recording.
 Rules:
 1. Extract must-have features, nice-to-haves, goals, and non-requirements into 'requirements'.
 2. EVERY requirement and task MUST include the exact timestamp string (e.g. '01:24') from the transcript where it was mentioned. Do NOT invent timestamps.
 3. Break down work into tasks with 'S' (1-2h), 'M' (3-6h), or 'L' (8-16h) effort tags.
-4. Draft a friendly, professional client confirmation message.
+4. Draft a client confirmation message using a '{message_tone}' tone.
+5. End the drafted client message with a polite sign-off from '{user_name}'.
 """
 
         prompt = f"### TRANSCRIPT:\n{transcript_text}"
@@ -87,14 +90,21 @@ Rules:
             client_message_draft=data.client_message_draft,
         )
 
-    def run_inquiry(self, transcript_text: str, hourly_rate: float = 100.0, currency: str = "USD") -> AgentProposal:
+    def run_inquiry(
+        self,
+        transcript_text: str,
+        hourly_rate: float = 100.0,
+        currency: str = "USD",
+        message_tone: str = "friendly and professional",
+        user_name: str = "Freelancer",
+    ) -> AgentProposal:
         """Runs the Inquiry Playbook for quick service pricing calls."""
-        system_instruction = """You are an AI assistant for a freelancer processing a simple Service Inquiry call.
+        system_instruction = f"""You are an AI assistant for a freelancer ({user_name}) processing a simple Service Inquiry call.
 Keep output lightweight:
 1. Provide a concise summary.
 2. Estimate a rough price range.
 3. Write an internal lead note.
-4. Draft a direct, polite follow-up message to send the client.
+4. Draft a direct follow-up message to send the client in a '{message_tone}' tone, ending with a sign-off from '{user_name}'.
 """
 
         prompt = f"### TRANSCRIPT:\n{transcript_text}"
@@ -118,15 +128,17 @@ Keep output lightweight:
         previous_brief_summary: Optional[str] = None,
         hourly_rate: float = 100.0,
         currency: str = "USD",
+        message_tone: str = "friendly and professional",
+        user_name: str = "Freelancer",
     ) -> AgentProposal:
         """Runs the Change Request Playbook comparing calls against previous project briefs."""
-        system_instruction = """You are an AI assistant for a freelancer processing a Change Request call on an ongoing project.
+        system_instruction = f"""You are an AI assistant for a freelancer ({user_name}) processing a Change Request call on an ongoing project.
 Rules:
 1. Compare new requests against the previous brief if provided.
 2. Flag items that represent Scope Creep.
 3. EVERY scope change MUST carry a valid timestamp from the transcript.
 4. Create updated/additional tasks for the new work.
-5. Draft a confirmation message asking the client to approve the scope & timeline adjustment.
+5. Draft a confirmation message asking the client to approve the scope & timeline adjustment in a '{message_tone}' tone, signed off by '{user_name}'.
 """
 
         prompt = f"### TRANSCRIPT:\n{transcript_text}\n"

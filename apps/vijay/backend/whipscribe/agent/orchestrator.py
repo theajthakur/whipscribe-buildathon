@@ -46,6 +46,8 @@ class AgentOrchestrator:
         override_intent: Optional[CallIntent] = None,
         hourly_rate: float = 100.0,
         currency: str = "USD",
+        message_tone: str = "friendly and professional",
+        user_name: str = "Freelancer",
         previous_brief_summary: Optional[str] = None,
         confidence_threshold: float = 0.70,
     ) -> OrchestrationResult:
@@ -98,13 +100,25 @@ class AgentOrchestrator:
 
         # 5. Execute Selected Playbook with registered tools
         selected_intent = router_result.intent
-        logs.append(f"Running Playbook for intent '{selected_intent.value}'...")
+        logs.append(f"Running Playbook for intent '{selected_intent.value}' with tone '{message_tone}' for '{user_name}'...")
 
         if selected_intent == CallIntent.DISCOVERY:
-            proposal = self.playbooks.run_discovery(transcript_text, hourly_rate=hourly_rate, currency=currency)
+            proposal = self.playbooks.run_discovery(
+                transcript_text,
+                hourly_rate=hourly_rate,
+                currency=currency,
+                message_tone=message_tone,
+                user_name=user_name,
+            )
 
         elif selected_intent == CallIntent.INQUIRY:
-            proposal = self.playbooks.run_inquiry(transcript_text, hourly_rate=hourly_rate, currency=currency)
+            proposal = self.playbooks.run_inquiry(
+                transcript_text,
+                hourly_rate=hourly_rate,
+                currency=currency,
+                message_tone=message_tone,
+                user_name=user_name,
+            )
 
         elif selected_intent == CallIntent.CHANGE_REQUEST:
             proposal = self.playbooks.run_change_request(
@@ -112,6 +126,8 @@ class AgentOrchestrator:
                 previous_brief_summary=history_summary,
                 hourly_rate=hourly_rate,
                 currency=currency,
+                message_tone=message_tone,
+                user_name=user_name,
             )
 
         else:

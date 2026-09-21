@@ -27,6 +27,9 @@ import {
   ChevronDown,
   Trash2,
   AlertTriangle,
+  Settings as SettingsIcon,
+  Calculator,
+  DollarSign,
 } from "lucide-react"
 
 export interface SubmissionItem {
@@ -289,6 +292,14 @@ function DashboardContent() {
             <RefreshCw className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Refresh</span>
           </button>
+          <Link
+            href="/dashboard/settings"
+            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors flex items-center gap-1.5 text-xs font-medium"
+            title="Settings & Rate Configuration"
+          >
+            <SettingsIcon className="w-3.5 h-3.5 text-primary" />
+            <span className="hidden sm:inline">Settings</span>
+          </Link>
           <div className="h-4 w-px bg-border" />
           <UserButton />
         </div>
@@ -500,6 +511,48 @@ function DashboardContent() {
                     <span className="text-muted-foreground font-mono text-[11px] bg-background/50 px-2.5 py-1 rounded-md border border-border">
                       Confidence: {(activeCallData.router_result.confidence * 100).toFixed(0)}%
                     </span>
+                  </div>
+                )}
+
+                {/* Dynamic Quote Cost Breakdown Card */}
+                {activeCallData?.proposal && (
+                  <div className="rounded-xl border border-border bg-card p-4 shadow-sm space-y-3">
+                    <div className="flex items-center justify-between pb-2 border-b border-border">
+                      <div className="flex items-center gap-2 text-xs font-mono font-semibold text-foreground">
+                        <Calculator className="w-4 h-4 text-primary" />
+                        CALCULATED PROJECT COST QUOTE
+                      </div>
+                      <Link
+                        href="/dashboard/settings"
+                        className="text-[11px] font-mono text-primary hover:underline flex items-center gap-1"
+                      >
+                        <SettingsIcon className="w-3 h-3" /> Edit Rate
+                      </Link>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                      <div className="p-3 rounded-lg bg-muted/20 border border-border/80">
+                        <span className="text-[11px] text-muted-foreground block mb-0.5">Hourly Rate</span>
+                        <span className="font-mono font-bold text-foreground text-sm">
+                          ${activeCallData.proposal.quote?.hourly_rate || 100}/hr
+                        </span>
+                      </div>
+                      <div className="p-3 rounded-lg bg-muted/20 border border-border/80">
+                        <span className="text-[11px] text-muted-foreground block mb-0.5">Expected Work Hours</span>
+                        <span className="font-mono font-bold text-foreground text-sm">
+                          {activeCallData.proposal.quote?.total_hours || Math.max(4, itemsToDisplay.filter((i: any) => i.type === 'task').length * 4)} hours
+                        </span>
+                      </div>
+                      <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
+                        <span className="text-[11px] text-muted-foreground block mb-0.5">Total Estimated Cost</span>
+                        <span className="font-mono font-extrabold text-primary text-base">
+                          ${(
+                            activeCallData.proposal.quote?.total_price ||
+                            Math.max(4, itemsToDisplay.filter((i: any) => i.type === 'task').length * 4) *
+                              (activeCallData.proposal.quote?.hourly_rate || 100)
+                          ).toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 )}
 
