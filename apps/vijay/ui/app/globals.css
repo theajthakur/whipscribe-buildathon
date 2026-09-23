@@ -1,112 +1,53 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-@import "shadcn/tailwind.css";
-
-/* Dark mode is toggled by adding the "dark" class on <html> */
-@custom-variant dark (&:where(.dark, .dark *));
 
 /* ------------------------------------------------------------------
-   1. Colour tokens (the ONLY place raw colour values may live)
-   Use in code as: bg-primary, text-foreground, border-border,
-   bg-accent, text-muted-foreground, bg-primary/10 (opacity is fine)
+   Single Dark Visual Theme — CallBrief Design System
+   All colors come from semantic CSS variables.
 ------------------------------------------------------------------- */
-:root {
+:root, .dark {
   /* Surfaces */
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --background: oklch(0.12 0 0);          /* Deep near-black background */
+  --foreground: oklch(0.98 0 0);          /* Off-white primary typography */
+  
+  --card: oklch(0.16 0 0);                /* Elevated dark surface */
+  --card-foreground: oklch(0.98 0 0);
 
-  /* Brand: cobalt */
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
+  --popover: oklch(0.16 0 0);
+  --popover-foreground: oklch(0.98 0 0);
 
-  /* Highlighter: used for timestamps and marked phrases in transcripts */
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  /* Primary Brand — Refined crisp off-white for CTA buttons */
+  --primary: oklch(0.98 0 0);
+  --primary-foreground: oklch(0.12 0 0);
 
-  /* Quiet UI */
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  /* Secondary Surface */
+  --secondary: oklch(0.20 0 0);
+  --secondary-foreground: oklch(0.98 0 0);
+
+  /* Restrained Accent — Subtle Emerald / Precision Teal */
+  --accent: oklch(0.24 0.04 175);
+  --accent-foreground: oklch(0.95 0.05 175);
+
+  /* Quiet UI & Borders */
+  --muted: oklch(0.20 0 0);
+  --muted-foreground: oklch(0.65 0 0);    /* Muted gray secondary text */
+  --border: oklch(1 0 0 / 8%);            /* Very subtle borders */
+  --input: oklch(1 0 0 / 12%);
+  --ring: oklch(0.85 0 0 / 30%);
 
   /* Status */
-  --success: #14805a;
-  --success-foreground: #ffffff;
-  --warning: #b45309;
-  --warning-foreground: #ffffff;
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: #ffffff;
+  --success: oklch(0.68 0.16 160);
+  --success-foreground: oklch(0.12 0 0);
+  --warning: oklch(0.75 0.15 70);
+  --warning-foreground: oklch(0.12 0 0);
+  --destructive: oklch(0.65 0.20 25);
+  --destructive-foreground: oklch(0.98 0 0);
 
   /* Shape */
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --radius: 0.5rem;
 }
 
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-
-  --success: #3ec895;
-  --success-foreground: #04150e;
-  --warning: #f0a04b;
-  --warning-foreground: #1c0f00;
-  --destructive: oklch(0.704 0.191 22.216);
-  --destructive-foreground: #1c0504;
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
-}
-
-/* ------------------------------------------------------------------
-   2. Expose tokens to Tailwind utilities
-------------------------------------------------------------------- */
+/* Expose tokens to Tailwind inline theme */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -134,49 +75,25 @@
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
 
-  /* Fonts: the CSS variables come from next/font in app/layout.tsx */
-  --font-display: var(--font-sora), ui-sans-serif, system-ui, sans-serif;
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-plex-mono), ui-monospace, SFMono-Regular, monospace;
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, monospace;
 
-  /* Radius scale */
-  --radius-sm: calc(var(--radius) - 6px);
-  --radius-md: calc(var(--radius) - 3px);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 6px);
-  --radius-2xl: calc(var(--radius) + 14px);
-  --font-heading: var(--font-sans);
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-popover: var(--popover);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+  --radius-xl: calc(var(--radius) + 4px);
 }
 
-/* ------------------------------------------------------------------
-   3. Base styles
-------------------------------------------------------------------- */
 @layer base {
   * {
     border-color: var(--border);
-    @apply border-border outline-ring/50;
   }
 
   html {
     scroll-behavior: smooth;
-    @apply font-sans;
+    color-scheme: dark;
+    background-color: var(--background);
+    color: var(--foreground);
   }
 
   body {
@@ -187,55 +104,32 @@
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
-    @apply bg-background text-foreground;
+    overflow-x: hidden;
   }
 
-  h1,
-  h2,
-  h3,
-  h4 {
-    font-family: var(--font-display);
-    letter-spacing: -0.02em;
-    line-height: 1.1;
-  }
-
-  :focus-visible {
-    outline: 2px solid var(--ring);
-    outline-offset: 2px;
+  h1, h2, h3, h4 {
+    letter-spacing: -0.03em;
+    line-height: 1.15;
   }
 
   ::selection {
-    background-color: var(--accent);
-    color: var(--accent-foreground);
+    background-color: oklch(1 0 0 / 15%);
+    color: var(--foreground);
   }
 
-  /* Modern Slim Scrollbar (replaces ugly browser defaults) */
+  /* Custom subtle scrollbar */
   ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
   }
-
   ::-webkit-scrollbar-track {
     background: transparent;
   }
-
   ::-webkit-scrollbar-thumb {
-    background: var(--border);
+    background: oklch(1 0 0 / 12%);
     border-radius: 9999px;
   }
-
   ::-webkit-scrollbar-thumb:hover {
-    background: var(--muted-foreground);
-  }
-
-  * {
-    scrollbar-width: thin;
-    scrollbar-color: var(--border) transparent;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  html {
-    scroll-behavior: auto;
+    background: oklch(1 0 0 / 25%);
   }
 }
