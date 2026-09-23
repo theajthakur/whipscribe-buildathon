@@ -2,8 +2,11 @@
 
 import React, { useEffect, useRef } from "react";
 import { getGsap } from "@/lib/gsap";
+import { useAuthModal } from "@/components/auth/AuthContext";
 
 export function Hero() {
+  const { openAuthModal } = useAuthModal();
+
   const containerRef = useRef<HTMLDivElement>(null);
   const headlineRef = useRef<HTMLHeadingElement>(null);
   const subtextRef = useRef<HTMLParagraphElement>(null);
@@ -42,7 +45,6 @@ export function Hero() {
           "-=0.4"
         );
 
-      // Subtle ambient waveform bar pulsing animation
       if (waveformRef.current) {
         const bars = waveformRef.current.querySelectorAll(".wave-bar");
         gsap.to(bars, {
@@ -64,10 +66,8 @@ export function Hero() {
       ref={containerRef}
       className="relative min-h-screen flex flex-col justify-center pt-32 pb-20 px-6 max-w-5xl mx-auto border-b border-border/40"
     >
-      {/* Background ambient lighting — very restrained */}
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[300px] bg-foreground/5 blur-[120px] pointer-events-none rounded-full" />
 
-      {/* Main Hero Content */}
       <div className="flex flex-col items-center text-center space-y-8 z-10">
         <h1
           ref={headlineRef}
@@ -88,12 +88,12 @@ export function Hero() {
           ref={ctaRef}
           className="flex flex-col sm:flex-row items-center gap-4 pt-2"
         >
-          <a
-            href="#workspace"
+          <button
+            onClick={() => openAuthModal("sign-up")}
             className="w-full sm:w-auto px-6 py-3.5 rounded-md bg-foreground text-background font-medium hover:bg-foreground/90 transition-all duration-150 flex items-center justify-center gap-2 text-base"
           >
             Start building →
-          </a>
+          </button>
           <a
             href="#problem"
             className="w-full sm:w-auto px-6 py-3.5 rounded-md border border-border bg-card text-foreground font-medium hover:bg-secondary transition-all duration-150 text-base"
@@ -102,12 +102,10 @@ export function Hero() {
           </a>
         </div>
 
-        {/* Elegant Abstract Product Visualization */}
         <div
           ref={vizRef}
           className="w-full max-w-3xl mt-16 p-6 sm:p-8 rounded-xl bg-card/60 border border-border/60 text-left font-mono text-sm space-y-6 shadow-2xl backdrop-blur-sm"
         >
-          {/* Top: Transcript snippet with waveform */}
           <div className="space-y-3 border-b border-border/40 pb-6">
             <div className="flex items-center justify-between text-xs text-muted-foreground">
               <span className="flex items-center gap-2 font-sans font-medium uppercase tracking-wider text-[11px]">
@@ -128,7 +126,6 @@ export function Hero() {
             </p>
           </div>
 
-          {/* Transition indicator */}
           <div className="flex justify-center -my-3">
             <div className="text-muted-foreground text-xs font-sans tracking-widest uppercase flex items-center gap-2 bg-card px-3 py-1 rounded-full border border-border/60">
               <span>Transforming</span>
@@ -136,7 +133,6 @@ export function Hero() {
             </div>
           </div>
 
-          {/* Bottom: Extracted Brief structure */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2 font-sans">
             <div className="space-y-2">
               <div className="text-xs font-mono text-muted-foreground uppercase tracking-wider">

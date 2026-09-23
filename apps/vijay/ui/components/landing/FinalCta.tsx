@@ -2,8 +2,10 @@
 
 import React, { useEffect, useRef } from "react";
 import { getGsap } from "@/lib/gsap";
+import { useAuthModal } from "@/components/auth/AuthContext";
 
 export function FinalCta() {
+  const { openAuthModal } = useAuthModal();
   const containerRef = useRef<HTMLDivElement>(null);
   const ctaContentRef = useRef<HTMLDivElement>(null);
 
@@ -50,12 +52,12 @@ export function FinalCta() {
         </p>
 
         <div className="pt-2">
-          <a
-            href="#workspace"
+          <button
+            onClick={() => openAuthModal("sign-up")}
             className="inline-flex items-center gap-2 px-8 py-4 rounded-md bg-foreground text-background font-medium hover:bg-foreground/90 transition-all duration-150 text-base shadow-lg"
           >
             Start with your next call →
-          </a>
+          </button>
         </div>
       </div>
 
@@ -83,12 +85,12 @@ export function FinalCta() {
           >
             How it works
           </a>
-          <a
-            href="#workspace"
+          <button
+            onClick={() => openAuthModal("sign-in")}
             className="hover:text-foreground transition-colors"
           >
             Sign in
-          </a>
+          </button>
         </nav>
 
         <div>© 2026 CallBrief</div>
