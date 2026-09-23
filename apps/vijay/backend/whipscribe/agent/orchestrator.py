@@ -46,6 +46,7 @@ class AgentOrchestrator:
         override_intent: Optional[CallIntent] = None,
         hourly_rate: float = 100.0,
         currency: str = "USD",
+        budget: Optional[float] = None,
         message_tone: str = "friendly and professional",
         user_name: str = "Freelancer",
         previous_brief_summary: Optional[str] = None,
@@ -107,6 +108,7 @@ class AgentOrchestrator:
                 transcript_text,
                 hourly_rate=hourly_rate,
                 currency=currency,
+                budget=budget,
                 message_tone=message_tone,
                 user_name=user_name,
             )
@@ -126,6 +128,7 @@ class AgentOrchestrator:
                 previous_brief_summary=history_summary,
                 hourly_rate=hourly_rate,
                 currency=currency,
+                budget=budget,
                 message_tone=message_tone,
                 user_name=user_name,
             )

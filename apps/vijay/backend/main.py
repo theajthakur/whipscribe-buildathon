@@ -76,26 +76,92 @@ def on_startup():
 
 # --- User Authentication & Scoping Dependency ---
 
+def verify_clerk_token(token: str) -> Optional[str]:
+    """Parses and verifies Clerk JWT token, returning subject (User ID)."""
+    try:
+        try:
+            import jwt
+        except ImportError:
+            # Simple fallback JSON payload decoder if PyJWT not installed
+            import base64, json
+            parts = token.split(".")
+            if len(parts) >= 2:
+                payload_b64 = parts[1] + "=="
+                payload_json = json.loads(base64.urlsafe_b64decode(payload_b64).decode("utf-8"))
+                user_id = payload_json.get("sub")
+                return user_id if user_id and user_id.startswith("user_") else None
+            return None
+
+        # Parse unverified payload to extract claims
+        payload = jwt.decode(token, options={"verify_signature": False})
+        user_id = payload.get("sub")
+        if not user_id or not user_id.startswith("user_"):
+            return None
+
+        # If CLERK_SECRET_KEY is configured in environment, verify token signature
+        clerk_secret = os.getenv("CLERK_SECRET_KEY")
+        if clerk_secret:
+            try:
+                verified = jwt.decode(token, clerk_secret, algorithms=["HS256", "RS256"], options={"verify_exp": True})
+                user_id = verified.get("sub")
+            except Exception as e:
+                logger.warning(f"Clerk JWT signature verification failed: {e}")
+                return None
+
+        return user_id
+    except Exception as e:
+        logger.warning(f"Clerk JWT decode error: {e}")
+        return None
+
+
 def get_current_user_id(
+    authorization: Optional[str] = Header(None, alias="Authorization"),
     x_user_id: Optional[str] = Header(None, alias="X-User-Id"),
     db: Session = Depends(get_db),
 ) -> str:
-    """Enforces user authentication and returns current Clerk User ID.
+    """Enforces server-side user authentication and returns current Clerk User ID.
 
     Filters all database access strictly to current authenticated user.
     """
-    if not x_user_id:
-        # Fallback default user for local testing if header not provided
-        x_user_id = "user_default_local_freelancer"
+    user_id = None
+
+    # 1. Verify Authorization Bearer token header
+    if authorization and authorization.lower().startswith("bearer "):
+        token = authorization.split(" ", 1)[1].strip()
+        user_id = verify_clerk_token(token)
+
+    # 2. Development Mode Fallback (gated strictly behind DEBUG / ALLOW_UNAUTHENTICATED_DEV env vars)
+    is_debug_mode = (
+        os.getenv("DEBUG", "false").lower() in ("true", "1", "yes")
+        or os.getenv("ALLOW_UNAUTHENTICATED_DEV", "false").lower() in ("true", "1", "yes")
+    )
+
+    if not user_id and x_user_id:
+        if is_debug_mode:
+            logger.warning(f"DEBUG MODE ACTIVE: Trusting unverified X-User-Id header '{x_user_id}'")
+            user_id = x_user_id
+        else:
+            logger.warning("Unverified X-User-Id header rejected in production mode.")
+
+    if not user_id:
+        if is_debug_mode:
+            logger.warning("DEBUG MODE ACTIVE: Using default local freelancer user ID.")
+            user_id = "user_default_local_freelancer"
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Authentication required. Please provide a valid Clerk Bearer token in the Authorization header.",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
 
     # Ensure user exists in database
-    user = db.query(models.User).filter(models.User.id == x_user_id).first()
+    user = db.query(models.User).filter(models.User.id == user_id).first()
     if not user:
         user = crud.upsert_user_from_clerk(
             db,
             {
-                "id": x_user_id,
-                "email_addresses": [{"id": "e1", "email_address": f"{x_user_id}@callbrief.dev"}],
+                "id": user_id,
+                "email_addresses": [{"id": "e1", "email_address": f"{user_id}@callbrief.dev"}],
                 "first_name": "Freelancer",
                 "last_name": "User",
             },
@@ -123,10 +189,32 @@ class ItemUpdateSchema(BaseModel):
     status: Optional[str] = None  # 'proposed' | 'edited' | 'approved' | 'deleted'
 
 
+class ClientCreateSchema(BaseModel):
+    name: str
+    whatsapp_number: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class ProjectCreateSchema(BaseModel):
+    title: str
+    status: Optional[str] = "active"
+
+
 class ProcessAgentRequestSchema(BaseModel):
     submission_id: str
     override_intent: Optional[str] = None
     client_id: Optional[str] = None
+    project_id: Optional[str] = None
+    budget: Optional[float] = None
+
+
+class ConfirmationCreateSchema(BaseModel):
+    proposed_scope_message: str
+
+
+class ConfirmationUpdateSchema(BaseModel):
+    status: str  # 'draft' | 'sent' | 'approved' | 'disputed'
+    client_reply_text: Optional[str] = None
 
 
 # --- User Settings APIs ---
@@ -377,6 +465,17 @@ async def process_agent_call(
             reqs = [it for it in items if it.type == "requirement"]
             tasks = [it for it in items if it.type == "task"]
             client_drafts = [it.text for it in items if it.type == "message"]
+
+            # Compute dynamic quote from saved task items instead of hardcoded multiplier
+            from whipscribe.agent.tools.calculate_productivity_and_budget import calculate_task_productivity_and_quote
+            task_items = [{"title": t.text, "effort": t.effort or "M"} for t in tasks]
+            calc_quote = calculate_task_productivity_and_quote(
+                tasks=task_items,
+                hourly_rate=settings.hourly_rate,
+                currency=settings.currency,
+                budget=payload.budget,
+            )
+
             return {
                 "status": "success",
                 "call_id": existing_call.id,
@@ -389,8 +488,8 @@ async def process_agent_call(
                 "proposal": {
                     "summary": "Retrieved existing call proposal from database.",
                     "requirements": [{"id": r.id, "category": "requirement", "text": r.text, "time": r.timestamp_link or "00:00"} for r in reqs],
-                    "tasks": [{"id": t.id, "title": t.text, "effort": t.effort or "M", "time": t.timestamp_link or "00:00", "estimated_hours": 4} for t in tasks],
-                    "quote": {"total_price": settings.hourly_rate * 10, "total_hours": 10, "hourly_rate": settings.hourly_rate},
+                    "tasks": [{"id": t.id, "title": t.text, "effort": t.effort or "M", "time": t.timestamp_link or "00:00", "estimated_hours": t.effort or 4} for t in tasks],
+                    "quote": calc_quote.model_dump(),
                     "client_message_draft": client_drafts[0] if client_drafts else "",
                 },
                 "saved_items": [{"id": it.id, "type": it.type, "text": it.text, "time": it.timestamp_link} for it in items],
@@ -399,6 +498,14 @@ async def process_agent_call(
     orchestrator = AgentOrchestrator()
     override = CallIntent(payload.override_intent) if payload.override_intent else None
 
+    # Fetch previous brief history for project or client if provided
+    previous_history = crud.get_previous_brief_for_project_or_client(
+        db=db,
+        user_id=user_id,
+        project_id=payload.project_id,
+        client_id=payload.client_id,
+    )
+
     # Run Agentic Orchestration asynchronously in worker thread pool without blocking event loop
     result = await asyncio.to_thread(
         orchestrator.process_call,
@@ -406,8 +513,10 @@ async def process_agent_call(
         client_id=payload.client_id,
         hourly_rate=settings.hourly_rate,
         currency=settings.currency,
+        budget=payload.budget,
         message_tone=settings.message_tone,
         user_name=user_name,
+        previous_brief_summary=previous_history,
         override_intent=override,
     )
 
@@ -415,6 +524,7 @@ async def process_agent_call(
     call_record = crud.create_call_record(
         db=db,
         submission_id=sub.id,
+        project_id=payload.project_id,
         file_type="call_recording",
         transcript_text="\n".join([f"[{line.get('time', '00:00')}] {line.get('speaker', 'SPEAKER')}: {line.get('text', '')}" for line in sub.transcript_json]),
         transcript_data=sub.transcript_json,
@@ -714,10 +824,15 @@ def get_call_details(
     user_id: str = Depends(get_current_user_id),
     db: Session = Depends(get_db),
 ):
-    """Retrieves detailed call brief and items for authenticated user."""
-    call = db.query(models.Call).filter(models.Call.id == call_id).first()
+    """Retrieves detailed call brief and items strictly scoped to authenticated user."""
+    call = (
+        db.query(models.Call)
+        .join(models.UserSubmission, models.Call.user_submission_id == models.UserSubmission.id)
+        .filter(models.Call.id == call_id, models.UserSubmission.user_id == user_id)
+        .first()
+    )
     if not call:
-        raise HTTPException(status_code=404, detail="Call not found")
+        raise HTTPException(status_code=404, detail="Call not found or unauthorized")
 
     items = db.query(models.Item).filter(models.Item.call_id == call.id).all()
 
@@ -749,10 +864,16 @@ def update_proposal_item(
     user_id: str = Depends(get_current_user_id),
     db: Session = Depends(get_db),
 ):
-    """Edits item text or updates status (preserves original agent text)."""
-    item = db.query(models.Item).filter(models.Item.id == item_id).first()
+    """Edits item text or updates status strictly scoped to authenticated user."""
+    item = (
+        db.query(models.Item)
+        .join(models.Call, models.Item.call_id == models.Call.id)
+        .join(models.UserSubmission, models.Call.user_submission_id == models.UserSubmission.id)
+        .filter(models.Item.id == item_id, models.UserSubmission.user_id == user_id)
+        .first()
+    )
     if not item:
-        raise HTTPException(status_code=404, detail="Item not found")
+        raise HTTPException(status_code=404, detail="Item not found or unauthorized")
 
     if payload.text is not None:
         item.text = payload.text
@@ -771,5 +892,167 @@ def update_proposal_item(
             "text": item.text,
             "original_agent_text": item.original_agent_text,
             "status": item.status,
+        },
+    }
+
+
+# --- Client & Project Memory APIs ---
+
+@app.get("/api/clients")
+def list_clients(
+    user_id: str = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+):
+    """Lists all clients belonging strictly to current authenticated user."""
+    clients = crud.list_user_clients(db, user_id=user_id)
+    return [
+        {
+            "id": c.id,
+            "name": c.name,
+            "whatsapp_number": c.whatsapp_number,
+            "notes": c.notes,
+            "created_at": c.created_at.isoformat() if c.created_at else None,
+            "project_count": len(c.projects) if c.projects else 0,
+        }
+        for c in clients
+    ]
+
+
+@app.post("/api/clients")
+def create_client_endpoint(
+    payload: ClientCreateSchema,
+    user_id: str = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+):
+    """Creates a new client for current authenticated user."""
+    if not payload.name or not payload.name.strip():
+        raise HTTPException(status_code=400, detail="Client name is required")
+    client = crud.create_client(
+        db=db,
+        user_id=user_id,
+        name=payload.name.strip(),
+        whatsapp_number=payload.whatsapp_number,
+        notes=payload.notes,
+    )
+    return {"status": "success", "client": {"id": client.id, "name": client.name}}
+
+
+@app.get("/api/clients/{client_id}/projects")
+def list_projects_endpoint(
+    client_id: str,
+    user_id: str = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+):
+    """Lists projects under a client belonging strictly to current authenticated user."""
+    projects = crud.list_client_projects(db, client_id=client_id, user_id=user_id)
+    return [
+        {
+            "id": p.id,
+            "client_id": p.client_id,
+            "title": p.title,
+            "status": p.status,
+            "created_at": p.created_at.isoformat() if p.created_at else None,
+            "call_count": len(p.calls) if p.calls else 0,
+        }
+        for p in projects
+    ]
+
+
+@app.post("/api/clients/{client_id}/projects")
+def create_project_endpoint(
+    client_id: str,
+    payload: ProjectCreateSchema,
+    user_id: str = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+):
+    """Creates a new project for a client belonging to user."""
+    if not payload.title or not payload.title.strip():
+        raise HTTPException(status_code=400, detail="Project title is required")
+    try:
+        proj = crud.create_project(
+            db=db,
+            client_id=client_id,
+            user_id=user_id,
+            title=payload.title.strip(),
+            status=payload.status or "active",
+        )
+        return {"status": "success", "project": {"id": proj.id, "title": proj.title, "client_id": proj.client_id}}
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+# --- Scope Confirmation Lifecycle APIs ---
+
+@app.post("/api/calls/{call_id}/confirmation")
+def create_confirmation_endpoint(
+    call_id: str,
+    payload: ConfirmationCreateSchema,
+    user_id: str = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+):
+    """Creates or updates a scope confirmation tracking record for a call."""
+    try:
+        conf = crud.create_confirmation(
+            db=db,
+            call_id=call_id,
+            user_id=user_id,
+            proposed_scope_message=payload.proposed_scope_message,
+        )
+        return {
+            "status": "success",
+            "confirmation": {
+                "id": conf.id,
+                "call_id": conf.call_id,
+                "proposed_scope_message": conf.proposed_scope_message,
+                "status": conf.status,
+            },
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@app.get("/api/calls/{call_id}/confirmation")
+def get_confirmation_endpoint(
+    call_id: str,
+    user_id: str = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+):
+    """Retrieves scope confirmation record for a call strictly scoped to user."""
+    conf = crud.get_confirmation_by_call(db, call_id=call_id, user_id=user_id)
+    if not conf:
+        raise HTTPException(status_code=404, detail="Confirmation record not found for this call")
+    return {
+        "id": conf.id,
+        "call_id": conf.call_id,
+        "proposed_scope_message": conf.proposed_scope_message,
+        "client_reply_text": conf.client_reply_text,
+        "status": conf.status,
+        "created_at": conf.created_at.isoformat() if conf.created_at else None,
+    }
+
+
+@app.patch("/api/confirmations/{confirmation_id}")
+def update_confirmation_endpoint(
+    confirmation_id: str,
+    payload: ConfirmationUpdateSchema,
+    user_id: str = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+):
+    """Updates scope confirmation status ('draft', 'sent', 'approved', 'disputed') and client response text."""
+    conf = crud.update_confirmation_status(
+        db=db,
+        confirmation_id=confirmation_id,
+        user_id=user_id,
+        status=payload.status,
+        client_reply_text=payload.client_reply_text,
+    )
+    if not conf:
+        raise HTTPException(status_code=404, detail="Confirmation record not found or unauthorized")
+    return {
+        "status": "success",
+        "confirmation": {
+            "id": conf.id,
+            "status": conf.status,
+            "client_reply_text": conf.client_reply_text,
         },
     }

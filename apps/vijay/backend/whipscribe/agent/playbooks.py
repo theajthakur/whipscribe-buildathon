@@ -58,6 +58,7 @@ class PlaybookProcessor:
         transcript_text: str,
         hourly_rate: float = 100.0,
         currency: str = "USD",
+        budget: Optional[float] = None,
         message_tone: str = "friendly and professional",
         user_name: str = "Freelancer",
     ) -> AgentProposal:
@@ -79,7 +80,7 @@ Rules:
             temperature=0.2,
         )
 
-        quote = calculate_quote_tool(data.tasks, hourly_rate=hourly_rate, currency=currency)
+        quote = calculate_quote_tool(data.tasks, hourly_rate=hourly_rate, currency=currency, budget=budget)
 
         return AgentProposal(
             intent="discovery",
@@ -128,6 +129,7 @@ Keep output lightweight:
         previous_brief_summary: Optional[str] = None,
         hourly_rate: float = 100.0,
         currency: str = "USD",
+        budget: Optional[float] = None,
         message_tone: str = "friendly and professional",
         user_name: str = "Freelancer",
     ) -> AgentProposal:
@@ -152,7 +154,7 @@ Rules:
             temperature=0.2,
         )
 
-        quote = calculate_quote_tool(data.updated_tasks, hourly_rate=hourly_rate, currency=currency)
+        quote = calculate_quote_tool(data.updated_tasks, hourly_rate=hourly_rate, currency=currency, budget=budget)
 
         return AgentProposal(
             intent="change_request",

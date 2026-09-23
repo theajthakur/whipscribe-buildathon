@@ -28,6 +28,10 @@ class QuoteEstimate(BaseModel):
     total_hours: float
     total_price: float
     currency: str = "USD"
+    normalized_rate_usd: float = 0.0
+    productivity_factor: float = 1.0
+    budget: Optional[float] = None
+    budget_status: Optional[str] = None
     breakdown: List[Dict[str, Any]]
 
 

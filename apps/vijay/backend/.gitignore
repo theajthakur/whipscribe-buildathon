@@ -1,0 +1,24 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environments
+.env
+.env.*
+venv/
+env/
+ENV/
+
+# Uploads and temporary storage
+uploads/
+*.mp3
+*.wav
+*.m4a
+*.ogg
+
+# Databases & logs
+*.db
+*.sqlite
+*.log
+alembic.log

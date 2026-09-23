@@ -19,6 +19,7 @@ from .get_client_history import GetClientHistoryTool
 from .extract_requirements import ExtractRequirementsTool
 from .create_tasks import CreateTasksTool
 from .estimate_timeline_and_quote import EstimateTimelineAndQuoteTool
+from .calculate_productivity_and_budget import CalculateProductivityAndBudgetTool
 from .compare_with_previous_brief import CompareWithPreviousBriefTool
 from .draft_client_message import DraftClientMessageTool
 from .save_lead_note import SaveLeadNoteTool
@@ -32,13 +33,14 @@ class ToolRegistry:
         self._register_default_tools()
 
     def _register_default_tools(self):
-        """Registers the 8 core tools from scope.md."""
+        """Registers core agent tools."""
         defaults = [
             GetTranscriptTool(),
             GetClientHistoryTool(),
             ExtractRequirementsTool(),
             CreateTasksTool(),
             EstimateTimelineAndQuoteTool(),
+            CalculateProductivityAndBudgetTool(),
             CompareWithPreviousBriefTool(),
             DraftClientMessageTool(),
             SaveLeadNoteTool(),

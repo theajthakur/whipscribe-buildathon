@@ -208,3 +208,198 @@ def log_agent_run(
     db.commit()
     db.refresh(run)
     return run
+
+
+# --- Client & Project Memory Management ---
+
+def create_client(
+    db: Session,
+    user_id: str,
+    name: str,
+    whatsapp_number: Optional[str] = None,
+    notes: Optional[str] = None,
+) -> Client:
+    """Creates a new client for a freelancer user."""
+    client = Client(
+        user_id=user_id,
+        name=name,
+        whatsapp_number=whatsapp_number,
+        notes=notes,
+    )
+    db.add(client)
+    db.commit()
+    db.refresh(client)
+    return client
+
+
+def list_user_clients(db: Session, user_id: str) -> List[Client]:
+    """Lists all clients belonging strictly to current user."""
+    return db.query(Client).filter(Client.user_id == user_id).order_by(Client.created_at.desc()).all()
+
+
+def get_client(db: Session, client_id: str, user_id: str) -> Optional[Client]:
+    """Fetches a client belonging to user."""
+    return db.query(Client).filter(Client.id == client_id, Client.user_id == user_id).first()
+
+
+def create_project(
+    db: Session,
+    client_id: str,
+    user_id: str,
+    title: str,
+    status: str = "active",
+) -> Project:
+    """Creates a new project under a client verified to belong to user."""
+    client = get_client(db, client_id, user_id)
+    if not client:
+        raise ValueError("Client not found or unauthorized")
+
+    project = Project(
+        client_id=client.id,
+        title=title,
+        status=status,
+    )
+    db.add(project)
+    db.commit()
+    db.refresh(project)
+    return project
+
+
+def list_client_projects(db: Session, client_id: str, user_id: str) -> List[Project]:
+    """Lists all projects for a client belonging to user."""
+    client = get_client(db, client_id, user_id)
+    if not client:
+        return []
+    return db.query(Project).filter(Project.client_id == client.id).order_by(Project.created_at.desc()).all()
+
+
+def get_project(db: Session, project_id: str, user_id: str) -> Optional[Project]:
+    """Fetches a project verifying user ownership through client."""
+    return (
+        db.query(Project)
+        .join(Client, Project.client_id == Client.id)
+        .filter(Project.id == project_id, Client.user_id == user_id)
+        .first()
+    )
+
+
+def get_previous_brief_for_project_or_client(
+    db: Session,
+    user_id: str,
+    project_id: Optional[str] = None,
+    client_id: Optional[str] = None,
+) -> Optional[str]:
+    """Queries prior completed calls for project or client and compiles a history summary."""
+    query = db.query(Call)
+
+    if project_id:
+        proj = get_project(db, project_id, user_id)
+        if proj:
+            query = query.filter(Call.project_id == proj.id)
+        else:
+            return None
+    elif client_id:
+        client = get_client(db, client_id, user_id)
+        if client:
+            query = query.join(Project, Call.project_id == Project.id).filter(Project.client_id == client.id)
+        else:
+            return None
+    else:
+        return None
+
+    prior_calls = query.order_by(Call.created_at.desc()).all()
+    if not prior_calls:
+        return None
+
+    lines = []
+    for call in prior_calls:
+        items = db.query(Item).filter(Item.call_id == call.id).all()
+        reqs = [it.text for it in items if it.type == "requirement"]
+        tasks = [it.text for it in items if it.type == "task"]
+        lines.append(f"--- Call Record ({call.detected_intent or 'brief'}) ---")
+        if reqs:
+            lines.append("Requirements Agreed: " + "; ".join(reqs))
+        if tasks:
+            lines.append("Tasks Agreed: " + "; ".join(tasks))
+
+    return "\n".join(lines) if lines else None
+
+
+# --- Scope Confirmation Lifecycle Management ---
+
+def create_confirmation(
+    db: Session,
+    call_id: str,
+    user_id: str,
+    proposed_scope_message: str,
+) -> Confirmation:
+    """Creates a confirmation record for a call scope proposal."""
+    # Verify call ownership
+    call = (
+        db.query(Call)
+        .join(UserSubmission, Call.user_submission_id == UserSubmission.id)
+        .filter(Call.id == call_id, UserSubmission.user_id == user_id)
+        .first()
+    )
+    if not call:
+        raise ValueError("Call not found or unauthorized")
+
+    # Reuse or create confirmation
+    conf = db.query(Confirmation).filter(Confirmation.call_id == call.id).first()
+    if conf:
+        conf.proposed_scope_message = proposed_scope_message
+        conf.status = "pending_client_approval"
+    else:
+        conf = Confirmation(
+            call_id=call.id,
+            proposed_scope_message=proposed_scope_message,
+            status="pending_client_approval",
+        )
+        db.add(conf)
+
+    db.commit()
+    db.refresh(conf)
+    return conf
+
+
+def get_confirmation_by_call(db: Session, call_id: str, user_id: str) -> Optional[Confirmation]:
+    """Fetches confirmation record for a call strictly scoped to authenticated user."""
+    return (
+        db.query(Confirmation)
+        .join(Call, Confirmation.call_id == Call.id)
+        .join(UserSubmission, Call.user_submission_id == UserSubmission.id)
+        .filter(Confirmation.call_id == call_id, UserSubmission.user_id == user_id)
+        .first()
+    )
+
+
+def get_confirmation_by_id(db: Session, confirmation_id: str, user_id: str) -> Optional[Confirmation]:
+    """Fetches confirmation record by ID strictly scoped to authenticated user."""
+    return (
+        db.query(Confirmation)
+        .join(Call, Confirmation.call_id == Call.id)
+        .join(UserSubmission, Call.user_submission_id == UserSubmission.id)
+        .filter(Confirmation.id == confirmation_id, UserSubmission.user_id == user_id)
+        .first()
+    )
+
+
+def update_confirmation_status(
+    db: Session,
+    confirmation_id: str,
+    user_id: str,
+    status: str,
+    client_reply_text: Optional[str] = None,
+) -> Optional[Confirmation]:
+    """Updates confirmation status ('draft', 'sent', 'approved', 'disputed') and client response."""
+    conf = get_confirmation_by_id(db, confirmation_id, user_id)
+    if not conf:
+        return None
+
+    conf.status = status
+    if client_reply_text is not None:
+        conf.client_reply_text = client_reply_text
+
+    db.commit()
+    db.refresh(conf)
+    return conf

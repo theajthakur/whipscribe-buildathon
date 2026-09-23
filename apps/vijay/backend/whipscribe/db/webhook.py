@@ -8,7 +8,11 @@ import os
 import logging
 from fastapi import APIRouter, Request, HTTPException, Depends, status
 from sqlalchemy.orm import Session
-from svix.webhooks import Webhook, WebhookVerificationError
+try:
+    from svix.webhooks import Webhook, WebhookVerificationError
+except ImportError:
+    Webhook = None
+    WebhookVerificationError = Exception
 from .database import get_db
 from .crud import upsert_user_from_clerk, delete_user_from_clerk
 
